@@ -49,18 +49,17 @@ df = df.withColumn("rolling_energy_30d", spark_sum("energy_sum").over(rolling_wi
 df = df.withColumn("rolling_energy_mean_14d", avg("energy_sum").over(rolling_window_14d))
 df = df.withColumn("rolling_energy_std_14d", stddev("energy_sum").over(rolling_window_14d))
 
-# Energy Consumption Trends (NEW)
+# Energy Consumption Trends
 df = df.withColumn("energy_trend_3d", col("rolling_energy_3d") - col("lag_1_day"))
 df = df.withColumn("energy_trend_7d", col("rolling_energy_7d") - col("lag_1_day"))
 
-# Daily Energy Change Percentage (NEW)
+# Daily Energy Change Percentage
 df = df.withColumn("daily_energy_change", (col("lag_1_day") - col("energy_sum")) / (col("lag_1_day") + 1))
 
 # Weather Interactions
 df = df.withColumn("temperature_variability", col("temperatureMax") - col("temperatureMin"))
 df = df.withColumn("humidity_temp_interaction", col("humidity") * col("temperatureMax"))
 df = df.withColumn("cloud_temp_interaction", col("cloudCover") * col("temperatureMax"))
-df = df.withColumn("dew_temperature_gap", col("temperatureMax") - col("dewPoint"))
 
 # Fill Missing Values
 df = df.dropna(subset=["energy_sum"])  
@@ -78,7 +77,6 @@ df = df.fillna({
     "temperature_variability": df.select(avg("temperatureMax") - avg("temperatureMin")).collect()[0][0],
     "humidity_temp_interaction": df.select(avg("humidity") * avg("temperatureMax")).collect()[0][0],
     "cloud_temp_interaction": df.select(avg("cloudCover") * avg("temperatureMax")).collect()[0][0],
-    "dew_temperature_gap": df.select(avg("temperatureMax") - avg("dewPoint")).collect()[0][0]
 })
 
 # Feature Engineering
@@ -90,7 +88,7 @@ feature_cols = [
     "energy_trend_3d", "energy_trend_7d",
     "daily_energy_change",
     "temperature_variability", "humidity_temp_interaction",
-    "cloud_temp_interaction", "dew_temperature_gap"
+    "cloud_temp_interaction"
 ]
 
 # Vector Assembler
@@ -113,14 +111,26 @@ xgb = SparkXGBRegressor(
     subsample=0.85,  
     colsample_bytree=0.85,  
     min_child_weight=5,  
-    lambda_=1.5,  # L2 regularization
     alpha=0.5,  # L1 regularization
-    num_round=600,  
-    n_estimators=600
+    n_estimators=600,
+    # lambda_=1.5,  # L2 regularization
+    # num_round=600,  
 )
 
 xgb_model = xgb.fit(train_df)
 predictions = xgb_model.transform(test_df)
+predictions = predictions.orderBy("day", "LCLid")
+
+# save predictions in csv
+repo_root = os.getcwd()  
+output_folder = os.path.join(repo_root, "xgboost_output")  
+os.makedirs(output_folder, exist_ok=True)
+temp_output_folder = os.path.join(repo_root, "temp_output")
+predictions.select("day", "LCLid", "energy_sum", "prediction").repartition(1).write.mode("overwrite").csv(temp_output_folder, header=True)
+part_file = glob.glob(os.path.join(temp_output_folder, "part-*.csv"))[0]
+final_output_path = os.path.join(output_folder, "xgboost_predictions.csv")
+shutil.move(part_file, final_output_path)
+shutil.rmtree(temp_output_folder)
 
 # Evaluate Model
 evaluator = RegressionEvaluator(labelCol="energy_sum", metricName="rmse")
@@ -130,3 +140,6 @@ print(f"Test RMSE (XGBoost): {rmse}")
 mean_energy_sum = df.select(avg("energy_sum")).collect()[0][0]
 rmse_percentage = (rmse / mean_energy_sum) * 100
 print(f"RMSE as percentage of mean: {rmse_percentage:.2f}%")
+
+# Stop Spark Session
+spark.stop()
