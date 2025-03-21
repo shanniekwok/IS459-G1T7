@@ -1,12 +1,4 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col
-
-# S3 Paths
-S3_INPUT_FOLDER = "s3://is459-g1t7-smart-meters-in-london/raw-data/"
-S3_OUTPUT_FOLDER = "s3://is459-g1t7-smart-meters-in-london/processed-data/"
-
-# [NOT TESTED] NEW CODE
-from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, mean, to_timestamp
 
 # S3 Paths
@@ -86,6 +78,13 @@ if __name__ == "__main__":
 # ====================================================================================================================================
 
 # # [TESTED, WORKS] OLD CODE
+
+# from pyspark.sql import SparkSession
+# from pyspark.sql.functions import col, mean, to_timestamp
+
+# # S3 Paths
+# S3_INPUT_FOLDER = "s3://is459-g1t7-smart-meters-in-london/raw-data/"
+# S3_OUTPUT_FOLDER = "s3://is459-g1t7-smart-meters-in-london/processed-data/"
 
 # def main():
 #     # Create Spark Session
