@@ -12,7 +12,7 @@ def main():
     spark = SparkSession.builder.appName("SmartMetersProcessing").getOrCreate()
 
     # Read input CSV files from S3
-    df2 = spark.read.csv(f"{S3_INPUT_FOLDER}halfhourly_dataset.csv", header=True, inferSchema=True)
+    df2 = spark.read.csv(f"{S3_INPUT_FOLDER}2. halfhourly_dataset.csv", header=True, inferSchema=True)
     df6 = spark.read.csv(f"{S3_INPUT_FOLDER}informations_households.csv", header=True, inferSchema=True)
     df10_1 = spark.read.csv(f"{S3_INPUT_FOLDER}acorn_information.csv", header=True, inferSchema=True)
     df10_2 = spark.read.csv(f"{S3_INPUT_FOLDER}acorn_category_information.csv", header=True, inferSchema=True)
