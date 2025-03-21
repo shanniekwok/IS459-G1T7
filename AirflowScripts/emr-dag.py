@@ -70,14 +70,14 @@ JOB_FLOW_OVERRIDES = {
                 'Name': 'Core node',
                 'Market': 'SPOT',
                 'InstanceRole': 'CORE',
-                'InstanceType': 'm5.xlarge',
+                'InstanceType': 'm5.2xlarge',
                 'InstanceCount': 2,
             },
             {
                 'Name': 'Task node',
                 'Market': 'SPOT',
                 'InstanceRole': 'TASK',
-                'InstanceType': 'm5.xlarge',
+                'InstanceType': 'm5.2xlarge',
                 'InstanceCount': 2,
             }
         ],
@@ -133,33 +133,91 @@ etl_step_checker = EmrStepSensor(
     dag=dag,
 )
 
-# Add the new ML Job to the EMR cluster
-ml_step_adder = EmrAddStepsOperator(
-    task_id='add_ml_step',
+# Add q2-ml-forest step to the EMR cluster
+ml_forest_step_adder = EmrAddStepsOperator(
+    task_id='add_ml_forest_step',
     job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value') }}",
-    steps= [
+    steps=[
         {
-            'Name': 'ML: Model Training and Prediction',
+            'Name': 'ML Forest',
             'HadoopJarStep': {
                 'Jar': 'command-runner.jar',
                 'Args': [
                     'spark-submit',
                     '--deploy-mode', 'cluster',
                     '--master', 'yarn',
-                    "s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/q2-ml-pyspark.py",
+                    "s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/q2-ml-forest.py",
                 ],
             },
-        }
+        },
     ],
     aws_conn_id='aws_default',
     dag=dag,
 )
 
-# Wait for the new ML Job to complete
-ml_step_checker = EmrStepSensor(
-    task_id='watch_ml_step',
+# Wait for the ML Forest step to complete
+ml_forest_step_checker = EmrStepSensor(
+    task_id='watch_ml_forest_step',
     job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value') }}",
-    step_id="{{ task_instance.xcom_pull(task_ids='add_ml_step', key='return_value')[0] }}",
+    step_id="{{ task_instance.xcom_pull(task_ids='add_ml_forest_step', key='return_value')[0] }}",
+    aws_conn_id='aws_default',
+    dag=dag,
+)
+
+# Add weather API step with Python3 (changed from spark-submit)
+weather_api_step_adder = EmrAddStepsOperator(
+    task_id='add_weather_api_step',
+    job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value') }}",
+    steps=[
+        {
+            'Name': 'Weather API with Python3',
+            'HadoopJarStep': {
+                'Jar': 'command-runner.jar',
+                'Args': [
+                    'bash', '-c',
+                    'sudo pip3 install python-dateutil -t /usr/lib/python3.9/site-packages && aws s3 cp s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/weather-api.py /tmp/ && /usr/bin/python3 /tmp/weather-api.py'
+                ],
+            },
+        },
+    ],
+    aws_conn_id='aws_default',
+    dag=dag,
+)
+
+# Wait for the weather API step to complete
+weather_api_step_checker = EmrStepSensor(
+    task_id='watch_weather_api_step',
+    job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value') }}",
+    step_id="{{ task_instance.xcom_pull(task_ids='add_weather_api_step', key='return_value')[0] }}",
+    aws_conn_id='aws_default',
+    dag=dag,
+)
+
+# Add 16 days forecast step with Python3 (changed from spark-submit)
+forecast_step_adder = EmrAddStepsOperator(
+    task_id='add_forecast_step',
+    job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value') }}",
+    steps=[
+        {
+            'Name': '16 Days Forecast with Python3',
+            'HadoopJarStep': {
+                'Jar': 'command-runner.jar',
+                'Args': [
+                    'bash', '-c',
+                    'pip3 install python-dateutil && aws s3 cp s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/16days-forecast.py /tmp/ &&  /usr/bin/python3 /tmp/16days-forecast.py'
+                ],
+            },
+        },
+    ],
+    aws_conn_id='aws_default',
+    dag=dag,
+)
+
+# Wait for the forecast step to complete
+forecast_step_checker = EmrStepSensor(
+    task_id='watch_forecast_step',
+    job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value') }}",
+    step_id="{{ task_instance.xcom_pull(task_ids='add_forecast_step', key='return_value')[0] }}",
     aws_conn_id='aws_default',
     dag=dag,
 )
@@ -168,13 +226,13 @@ ml_step_checker = EmrStepSensor(
 glue_crawler_task = GlueCrawlerOperator(
     task_id='run_glue_crawler',
     config = {
-        'Name': 'mwaa-output-crawler',
+        'Name': 'q2-ml-forest-output-crawler',
         'Role': 'arn:aws:iam::761018854594:role/service-role/AWSGlueServiceRole-project-q2-real',  # Ensure this role exists
-        'DatabaseName': 'mwaa-output-database',  # Ensure this database exists
+        'DatabaseName': 'q2-processed-data-output',  # Ensure this database exists
         'Targets': {
             'S3Targets': [
                 {
-                    'Path': 's3://is459-g1t7-smart-meters-in-london/mwaa-output/merged_df1_df3_df7_df8/',
+                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df1_df3_df7_df8/',
                     'Exclusions': [],
                     'SampleSize': 2,
                 },
@@ -194,4 +252,4 @@ cluster_terminator = EmrTerminateJobFlowOperator(
 )
 
 # Define the DAG dependencies
-cluster_creator >> etl_step_adder >> etl_step_checker >> glue_crawler_task >> ml_step_adder >> ml_step_checker >> cluster_terminator
+cluster_creator >> etl_step_adder >> etl_step_checker >> ml_forest_step_adder >> ml_forest_step_checker >> weather_api_step_adder >> weather_api_step_checker >> forecast_step_adder >> forecast_step_checker >> glue_crawler_task >> cluster_terminator
