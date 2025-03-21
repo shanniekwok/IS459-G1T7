@@ -1,0 +1,177 @@
+# --------------------------------------
+# Import libraries
+# --------------------------------------
+from datetime import datetime, timedelta
+from airflow import DAG
+from airflow.providers.amazon.aws.operators.emr import (
+    EmrCreateJobFlowOperator,
+    EmrAddStepsOperator,
+    EmrTerminateJobFlowOperator,
+)
+from airflow.providers.amazon.aws.sensors.emr import EmrStepSensor
+from airflow.providers.amazon.aws.operators.glue_crawler import GlueCrawlerOperator
+
+# --------------------------------------
+# Set default arguments
+# --------------------------------------
+default_args = {
+    'owner': 'airflow',
+    'depends_on_past': False,
+    'email_on_failure': False,
+    'email_on_retry': False,
+    'retries': 1,
+    'retry_delay': timedelta(minutes=5),
+}
+
+# --------------------------------------
+# Create DAG
+# --------------------------------------
+dag = DAG(
+    'emr_dag_q1',
+    default_args=default_args,
+    schedule_interval=timedelta(days=1),
+    start_date=datetime(2023, 1, 1),
+    catchup=False,
+)
+
+# --------------------------------------
+# Define EMR cluster configuration
+# --------------------------------------
+JOB_FLOW_OVERRIDES = {
+    'Name': 'smart-meters-emr-cluster-q1',
+    'ReleaseLabel': 'emr-7.8.0',
+    'Applications': [
+        {'Name': 'Hadoop'},
+        {'Name': 'Spark'},
+        {'Name': 'Hive'},
+        {'Name': 'Livy'},
+        {'Name': 'JupyterHub'},
+        {'Name': 'JupyterEnterpriseGateway'},
+        {'Name': 'Hue'},
+    ],
+    'BootstrapActions': [
+        {
+            'Name': 'Install Dependencies',
+            'ScriptBootstrapAction': {
+                'Path': 's3://is459-g1t7-smart-meters-in-london/bootstrap/emr-setup-q1.sh', # [TO DO] upload .sh config file
+            }
+        },
+    ],
+    'Instances': {
+        'InstanceGroups': [
+            {
+                'Name': 'Master node',
+                'Market': 'SPOT',
+                'InstanceRole': 'MASTER',
+                'InstanceType': 'm5.xlarge',
+                'InstanceCount': 1,
+            },
+            {
+                'Name': 'Core node',
+                'Market': 'SPOT',
+                'InstanceRole': 'CORE',
+                'InstanceType': 'm5.xlarge',
+                'InstanceCount': 2,
+            },
+            {
+                'Name': 'Task node',
+                'Market': 'SPOT',
+                'InstanceRole': 'TASK',
+                'InstanceType': 'm5.xlarge',
+                'InstanceCount': 2,
+            }
+        ],
+        'Ec2KeyName': 'is459-key',
+        'Ec2SubnetId': 'subnet-07735f77141ca3c13',
+        'KeepJobFlowAliveWhenNoSteps': True,
+        'TerminationProtected': False,
+    },
+    'VisibleToAllUsers': True,
+    'JobFlowRole': 'arn:aws:iam::761018854594:instance-profile/AmazonEMR-InstanceProfile-20250210T202740',
+    'ServiceRole': 'arn:aws:iam::761018854594:role/service-role/AmazonEMR-ServiceRole-20250310T153207',
+    'LogUri': 's3://is459-g1t7-smart-meters-in-london/logs/',
+}
+
+# --------------------------------------
+# Create EMR cluster
+# --------------------------------------
+cluster_creator = EmrCreateJobFlowOperator(
+    task_id='create_emr_cluster_q1',
+    job_flow_overrides=JOB_FLOW_OVERRIDES,
+    aws_conn_id='aws_default',
+    emr_conn_id='emr_default',
+    dag=dag,
+)
+
+# --------------------------------------
+# Add ETL Step to EMR cluster
+# --------------------------------------
+etl_step_adder = EmrAddStepsOperator(
+    task_id='add_etl_step_q1',
+    job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster_q1', key='return_value') }}",
+    steps= [
+        {
+            'Name': 'ETL: Data Processing',
+            'HadoopJarStep': {
+                'Jar': 'command-runner.jar',
+                'Args': [
+                    'spark-submit',
+                    '--deploy-mode', 'cluster',
+                    '--master', 'yarn',
+                    "s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/q1-etl-pyspark.py", # [TO DO] upload 1-etl-pyspark.py
+                ],
+            },
+        }
+    ],
+    aws_conn_id='aws_default',
+    dag=dag,
+)
+
+# --------------------------------------
+# Wait for ETL Step to complete
+# --------------------------------------
+etl_step_checker = EmrStepSensor(
+    task_id='watch_etl_step_q1',
+    job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster_q1', key='return_value') }}",
+    step_id="{{ task_instance.xcom_pull(task_ids='add_etl_step_q1', key='return_value')[0] }}",
+    aws_conn_id='aws_default',
+    dag=dag,
+)
+
+# --------------------------------------
+# Add Glue Crawler to DAG
+# --------------------------------------
+glue_crawler_task = GlueCrawlerOperator(
+    task_id='run_glue_crawler_q1',
+    config = {
+        'Name': 'glue_crawler_output_q1',
+        'Role': 'arn:aws:iam::761018854594:role/service-role/AWSGlueServiceRole-project-q2-real',  # [TO DO] create role
+        'DatabaseName': 'mwaa-output-database',  # [TO DO] change database name
+        'Targets': {
+            'S3Targets': [
+                {
+                    'Path': 's3://is459-g1t7-smart-meters-in-london/mwaa-output/merged_df1_df3_df7_df8/',  # [TO DO] change file name
+                    'Exclusions': [],
+                    'SampleSize': 2,
+                },
+            ],
+        },
+    },
+    aws_conn_id='aws_default',
+    dag=dag,
+)
+
+# --------------------------------------
+# Terminate EMR Cluster
+# --------------------------------------
+cluster_terminator = EmrTerminateJobFlowOperator(
+    task_id='terminate_emr_cluster_q1',
+    job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster_q1', key='return_value') }}",
+    aws_conn_id='aws_default',
+    dag=dag,
+)
+
+# --------------------------------------
+# Define DAG Dependency
+# --------------------------------------
+cluster_creator >> etl_step_adder >> etl_step_checker >> glue_crawler_task >> cluster_terminator
