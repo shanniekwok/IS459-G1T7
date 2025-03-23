@@ -23,7 +23,8 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 # Load Parquet file
-s3_path = "s3a://is459-g1t7-smart-meters-in-london/processed-data/merged_df1_df3_df7_df8"
+# s3_path = "s3a://is459-g1t7-smart-meters-in-london/processed-data/merged_df1_df3_df7_df8"
+s3_path = "s3a://is459-g1t7-smart-meters-in-london/processed-data/merged_q2_daily"
 df_spark = spark.read.parquet(s3_path)
 
 # Define features
@@ -37,7 +38,7 @@ features = [
 target = "energy_mean"
 
 # Handle missing values in Spark DataFrame
-df_spark = df_spark.dropna(subset=["energy_sum"])
+# df_spark = df_spark.dropna(subset=["energy_sum"]) # commented as this is already dropped during ETL
 
 # Handle precipType in Spark
 if "precipType" in df_spark.columns:
