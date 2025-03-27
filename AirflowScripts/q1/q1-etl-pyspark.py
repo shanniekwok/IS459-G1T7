@@ -16,10 +16,7 @@ def main():
     df6 = spark.read.csv(f"{S3_INPUT_FOLDER}informations_households.csv", header=True, inferSchema=True)
     df10_1 = spark.read.csv(f"{S3_INPUT_FOLDER}acorn_information.csv", header=True, inferSchema=True)
     df10_reduced = df10_1.select("Acorn", "Acorn Category")     # Reduce df10_1 to required columns
-    df12 = spark.read.format("com.crealytics.spark.excel") \
-                    .option("header", "true") \
-                    .option("inferSchema", "true") \
-                    .load(f"{S3_INPUT_FOLDER}tariff_type.xlsx")
+    df12 = spark.read.csv(f"{S3_INPUT_FOLDER}tariff_type.csv", header=True, inferSchema=True)
 
     # ---------- CONVERT COLUMN TYPES ----------
 
