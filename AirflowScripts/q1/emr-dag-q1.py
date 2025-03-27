@@ -119,7 +119,7 @@ etl_step_adder = EmrAddStepsOperator(
                     'spark-submit',
                     '--deploy-mode', 'cluster',
                     '--master', 'yarn',
-                    "s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/q1-etl-pyspark-v2.py", # 1. CHANGE TO LATEST SPARK CODE
+                    "s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/q1-etl-pyspark.py"
                 ],
             },
         }
@@ -146,30 +146,15 @@ glue_crawler_task = GlueCrawlerOperator(
     task_id='run_glue_crawler_q1',
     config = {
         'Name': 'glue_crawler_output_q1',
-        'Role': 'arn:aws:iam::761018854594:role/AWSGlueServiceRole-project-q1-v1',  # [TO DO] create role
-        'DatabaseName': 'q1-processed-data-schema',  # [TO DO] change database name
+        'Role': 'arn:aws:iam::761018854594:role/AWSGlueServiceRole-project-q1-v1',
+        'DatabaseName': 'q1-processed-data-schema',
         'Targets': {
-            'S3Targets': [                                                                                  # 2. UPDATE TARGET TO PROCESSED DATA FOLDERS
+            'S3Targets': [
                 {
-                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df12_acorn/',  # [TO DO] change file name
+                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/final_q1_df/',
                     'Exclusions': [],
                     'SampleSize': 2,
                 },
-                {
-                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df12_acorn_grouped/',  # [TO DO] change file name
-                    'Exclusions': [],
-                    'SampleSize': 2,
-                },
-                {
-                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df12_acorn_category/',  # [TO DO] change file name
-                    'Exclusions': [],
-                    'SampleSize': 2,
-                }
-                # {
-                #     'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df1_df5_df10/',  # for OLD PYSPARK CODE
-                #     'Exclusions': [],
-                #     'SampleSize': 2,
-                # },
             ],
         },
     },
@@ -180,15 +165,20 @@ glue_crawler_task = GlueCrawlerOperator(
 # --------------------------------------
 # Add Athena Query Task to DAG
 # --------------------------------------
+<<<<<<< Updated upstream
 athena_query_task1 = AthenaOperator(
     task_id='execute_athena_query1_q1',          # 3. UPDATE QUERY TO RETRIEVE FROM CORRECT SCHEMA (CHANGE merged_df1_df5_df10 TO CORRECT ONE)
+=======
+athena_query_task = AthenaOperator(
+    task_id='execute_athena_query_q1'
+>>>>>>> Stashed changes
     query="""
         SELECT 
             *
-        FROM "q1-processed-data-schema"."merged_df12_acorn"
+        FROM "q1-processed-data-schema"."final_q1_df"
     """,
-    database='"q1-processed-data-schema"',  # Ensure this matches the Glue Crawler output database
-    output_location='s3://is459-g1t7-smart-meters-in-london/athena-results/merged_df12_acorn/',  # Change to a valid S3 bucket
+    database='"q1-processed-data-schema"',
+    output_location='s3://is459-g1t7-smart-meters-in-london/athena-results/final_q1_df/',
     workgroup='primary',
     aws_conn_id='aws_default',
     dag=dag,
