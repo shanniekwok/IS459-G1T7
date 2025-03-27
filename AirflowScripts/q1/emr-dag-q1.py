@@ -165,13 +165,8 @@ glue_crawler_task = GlueCrawlerOperator(
 # --------------------------------------
 # Add Athena Query Task to DAG
 # --------------------------------------
-<<<<<<< Updated upstream
-athena_query_task1 = AthenaOperator(
-    task_id='execute_athena_query1_q1',          # 3. UPDATE QUERY TO RETRIEVE FROM CORRECT SCHEMA (CHANGE merged_df1_df5_df10 TO CORRECT ONE)
-=======
 athena_query_task = AthenaOperator(
     task_id='execute_athena_query_q1'
->>>>>>> Stashed changes
     query="""
         SELECT 
             *
