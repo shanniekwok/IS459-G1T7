@@ -180,40 +180,6 @@ athena_query_task = AthenaOperator(
 )
 
 # --------------------------------------
-# Add Athena Query Task to DAG
-# --------------------------------------
-athena_query_task2 = AthenaOperator(
-    task_id='execute_athena_query2_q1',          # 3. UPDATE QUERY TO RETRIEVE FROM CORRECT SCHEMA (CHANGE merged_df1_df5_df10 TO CORRECT ONE)
-    query="""
-        SELECT 
-            *
-        FROM "q1-processed-data-schema"."merged_df12_acorn_grouped"
-    """,
-    database='"q1-processed-data-schema"',  # Ensure this matches the Glue Crawler output database
-    output_location='s3://is459-g1t7-smart-meters-in-london/athena-results/merged_df12_acorn_grouped/',  # Change to a valid S3 bucket
-    workgroup='primary',
-    aws_conn_id='aws_default',
-    dag=dag,
-)
-
-# --------------------------------------
-# Add Athena Query Task to DAG
-# --------------------------------------
-athena_query_task3 = AthenaOperator(
-    task_id='execute_athena_query3_q1',          # 3. UPDATE QUERY TO RETRIEVE FROM CORRECT SCHEMA (CHANGE merged_df1_df5_df10 TO CORRECT ONE)
-    query="""
-        SELECT 
-            *
-        FROM "q1-processed-data-schema"."merged_df12_acorn_category"
-    """,
-    database='"q1-processed-data-schema"',  # Ensure this matches the Glue Crawler output database
-    output_location='s3://is459-g1t7-smart-meters-in-london/athena-results/merged_df12_acorn_category/',  # Change to a valid S3 bucket
-    workgroup='primary',
-    aws_conn_id='aws_default',
-    dag=dag,
-)
-
-# --------------------------------------
 # Terminate EMR Cluster
 # --------------------------------------
 cluster_terminator = EmrTerminateJobFlowOperator(
