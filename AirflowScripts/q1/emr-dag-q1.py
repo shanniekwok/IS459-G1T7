@@ -64,21 +64,21 @@ JOB_FLOW_OVERRIDES = {
                 'Name': 'Master node',
                 'Market': 'SPOT',
                 'InstanceRole': 'MASTER',
-                'InstanceType': 'm5.xlarge',
+                'InstanceType': 'm5.2xlarge',
                 'InstanceCount': 1,
             },
             {
                 'Name': 'Core node',
                 'Market': 'SPOT',
                 'InstanceRole': 'CORE',
-                'InstanceType': 'm5.xlarge',
+                'InstanceType': 'm5.2xlarge',
                 'InstanceCount': 2,
             },
             {
                 'Name': 'Task node',
                 'Market': 'SPOT',
                 'InstanceRole': 'TASK',
-                'InstanceType': 'm5.xlarge',
+                'InstanceType': 'm5.2xlarge',
                 'InstanceCount': 2,
             }
         ],
@@ -150,26 +150,26 @@ glue_crawler_task = GlueCrawlerOperator(
         'DatabaseName': 'q1-processed-data-schema',  # [TO DO] change database name
         'Targets': {
             'S3Targets': [                                                                                  # 2. UPDATE TARGET TO PROCESSED DATA FOLDERS
-                # {
-                #     'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df12_acorn/',  # [TO DO] change file name
-                #     'Exclusions': [],
-                #     'SampleSize': 2,
-                # },
-                # {
-                #     'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df12_acorn_grouped/',  # [TO DO] change file name
-                #     'Exclusions': [],
-                #     'SampleSize': 2,
-                # },
-                # {
-                #     'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df12_acorn_category/',  # [TO DO] change file name
-                #     'Exclusions': [],
-                #     'SampleSize': 2,
-                # },
                 {
-                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df1_df5_df10/',  # for OLD PYSPARK CODE
+                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df12_acorn/',  # [TO DO] change file name
                     'Exclusions': [],
                     'SampleSize': 2,
                 },
+                {
+                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df12_acorn_grouped/',  # [TO DO] change file name
+                    'Exclusions': [],
+                    'SampleSize': 2,
+                },
+                {
+                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df12_acorn_category/',  # [TO DO] change file name
+                    'Exclusions': [],
+                    'SampleSize': 2,
+                }
+                # {
+                #     'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df1_df5_df10/',  # for OLD PYSPARK CODE
+                #     'Exclusions': [],
+                #     'SampleSize': 2,
+                # },
             ],
         },
     },
@@ -185,10 +185,10 @@ athena_query_task = AthenaOperator(
     query="""
         SELECT 
             *
-        FROM "q1-processed-data-schema"."merged_df1_df5_df10"
+        FROM "q1-processed-data-schema"."merged_df12_acorn"
     """,
     database='"q1-processed-data-schema"',  # Ensure this matches the Glue Crawler output database
-    output_location='s3://is459-g1t7-smart-meters-in-london/athena-results/',  # Change to a valid S3 bucket
+    output_location='s3://is459-g1t7-smart-meters-in-london/athena-results/merged_df12_acorn/',  # Change to a valid S3 bucket
     workgroup='primary',
     aws_conn_id='aws_default',
     dag=dag,
