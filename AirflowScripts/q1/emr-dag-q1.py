@@ -64,21 +64,21 @@ JOB_FLOW_OVERRIDES = {
                 'Name': 'Master node',
                 'Market': 'SPOT',
                 'InstanceRole': 'MASTER',
-                'InstanceType': 'm5.xlarge',
+                'InstanceType': 'm5.2xlarge',
                 'InstanceCount': 1,
             },
             {
                 'Name': 'Core node',
                 'Market': 'SPOT',
                 'InstanceRole': 'CORE',
-                'InstanceType': 'm5.xlarge',
+                'InstanceType': 'm5.2xlarge',
                 'InstanceCount': 2,
             },
             {
                 'Name': 'Task node',
                 'Market': 'SPOT',
                 'InstanceRole': 'TASK',
-                'InstanceType': 'm5.xlarge',
+                'InstanceType': 'm5.2xlarge',
                 'InstanceCount': 2,
             }
         ],
@@ -119,7 +119,7 @@ etl_step_adder = EmrAddStepsOperator(
                     'spark-submit',
                     '--deploy-mode', 'cluster',
                     '--master', 'yarn',
-                    "s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/q1-etl-pyspark-v2.py", # 1. CHANGE TO LATEST SPARK CODE
+                    "s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/q1-etl-pyspark.py"
                 ],
             },
         }
@@ -146,27 +146,12 @@ glue_crawler_task = GlueCrawlerOperator(
     task_id='run_glue_crawler_q1',
     config = {
         'Name': 'glue_crawler_output_q1',
-        'Role': 'arn:aws:iam::761018854594:role/AWSGlueServiceRole-project-q1-v1',  # [TO DO] create role
-        'DatabaseName': 'q1-processed-data-schema',  # [TO DO] change database name
+        'Role': 'arn:aws:iam::761018854594:role/AWSGlueServiceRole-project-q1-v1',
+        'DatabaseName': 'q1-processed-data-schema',
         'Targets': {
-            'S3Targets': [                                                                                  # 2. UPDATE TARGET TO PROCESSED DATA FOLDERS
-                # {
-                #     'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df12_acorn/',  # [TO DO] change file name
-                #     'Exclusions': [],
-                #     'SampleSize': 2,
-                # },
-                # {
-                #     'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df12_acorn_grouped/',  # [TO DO] change file name
-                #     'Exclusions': [],
-                #     'SampleSize': 2,
-                # },
-                # {
-                #     'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df12_acorn_category/',  # [TO DO] change file name
-                #     'Exclusions': [],
-                #     'SampleSize': 2,
-                # },
+            'S3Targets': [
                 {
-                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df1_df5_df10/',  # for OLD PYSPARK CODE
+                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/final_q1_df/',
                     'Exclusions': [],
                     'SampleSize': 2,
                 },
@@ -181,14 +166,14 @@ glue_crawler_task = GlueCrawlerOperator(
 # Add Athena Query Task to DAG
 # --------------------------------------
 athena_query_task = AthenaOperator(
-    task_id='execute_athena_query_q1',          # 3. UPDATE QUERY TO RETRIEVE FROM CORRECT SCHEMA (CHANGE merged_df1_df5_df10 TO CORRECT ONE)
+    task_id='execute_athena_query_q1'
     query="""
         SELECT 
             *
-        FROM "q1-processed-data-schema"."merged_df1_df5_df10"
+        FROM "q1-processed-data-schema"."final_q1_df"
     """,
-    database='"q1-processed-data-schema"',  # Ensure this matches the Glue Crawler output database
-    output_location='s3://is459-g1t7-smart-meters-in-london/athena-results/',  # Change to a valid S3 bucket
+    database='"q1-processed-data-schema"',
+    output_location='s3://is459-g1t7-smart-meters-in-london/athena-results/final_q1_df/',
     workgroup='primary',
     aws_conn_id='aws_default',
     dag=dag,
@@ -207,4 +192,4 @@ cluster_terminator = EmrTerminateJobFlowOperator(
 # --------------------------------------
 # Define DAG Dependency
 # --------------------------------------
-cluster_creator >> etl_step_adder >> etl_step_checker >> glue_crawler_task >> athena_query_task >> cluster_terminator
+cluster_creator >> etl_step_adder >> etl_step_checker >> glue_crawler_task >> athena_query_task1 >> athena_query_task2 >> athena_query_task3 >> cluster_terminator
