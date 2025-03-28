@@ -99,10 +99,10 @@ def main():
     )
 
     # Drop columns with too many missing values / irrelevant
-    columns_to_drop = ["energy_std", "uvIndexTime", "moonPhase"]
-    for col_name in columns_to_drop:
-        if col_name in merged_daily_df1_df7_df8.columns:
-            merged_daily_df1_df7_df8 = merged_daily_df1_df7_df8.drop(col_name)
+    # columns_to_drop = ["energy_std", "uvIndexTime", "moonPhase"]
+    # for col_name in columns_to_drop:
+    #     if col_name in merged_daily_df1_df7_df8.columns:
+    #         merged_daily_df1_df7_df8 = merged_daily_df1_df7_df8.drop(col_name)
     
     # Check number of records after merging
     print("Total number of records after merging:", merged_daily_df1_df7_df8.count())
