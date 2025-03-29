@@ -28,7 +28,7 @@ default_args = {
 # Create DAG
 # --------------------------------------
 dag = DAG(
-    'emr_dag_q1',
+    'emr_dag',
     default_args=default_args,
     schedule_interval=timedelta(days=1),
     start_date=datetime(2023, 1, 1),
@@ -97,7 +97,7 @@ JOB_FLOW_OVERRIDES = {
 # Create EMR cluster
 # --------------------------------------
 cluster_creator = EmrCreateJobFlowOperator(
-    task_id='create_emr_cluster_q1',
+    task_id='create_emr_cluster',
     job_flow_overrides=JOB_FLOW_OVERRIDES,
     aws_conn_id='aws_default',
     emr_conn_id='emr_default',
@@ -105,11 +105,46 @@ cluster_creator = EmrCreateJobFlowOperator(
 )
 
 # --------------------------------------
+# # Add Merge Data Step to the EMR cluster
+# --------------------------------------
+merge_data_step_adder = EmrAddStepsOperator(
+    task_id='add_merge_data_step',
+    job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value') }}",
+    steps=[
+        {
+            'Name': 'Merge Daily Data',
+            'HadoopJarStep': {
+                'Jar': 'command-runner.jar',
+                'Args': [
+                    'spark-submit',
+                    '--deploy-mode', 'cluster',
+                    '--master', 'yarn',
+                    "s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/q1-merge-halfhourly-data.py",
+                ],
+            },
+        }
+    ],
+    aws_conn_id='aws_default',
+    dag=dag,
+)
+
+# --------------------------------------
+# Wait for the Merge Data step to complete
+# --------------------------------------
+merge_data_step_checker = EmrStepSensor(
+    task_id='watch_merge_data_step',
+    job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value') }}",
+    step_id="{{ task_instance.xcom_pull(task_ids='add_merge_data_step', key='return_value')[0] }}",
+    aws_conn_id='aws_default',
+    dag=dag,
+)
+
+# --------------------------------------
 # Add ETL Step to EMR cluster
 # --------------------------------------
 etl_step_adder = EmrAddStepsOperator(
-    task_id='add_etl_step_q1',
-    job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster_q1', key='return_value') }}",
+    task_id='add_etl_step',
+    job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value') }}",
     steps= [
         {
             'Name': 'ETL: Data Processing',
@@ -132,9 +167,9 @@ etl_step_adder = EmrAddStepsOperator(
 # Wait for ETL Step to complete
 # --------------------------------------
 etl_step_checker = EmrStepSensor(
-    task_id='watch_etl_step_q1',
-    job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster_q1', key='return_value') }}",
-    step_id="{{ task_instance.xcom_pull(task_ids='add_etl_step_q1', key='return_value')[0] }}",
+    task_id='watch_etl_step',
+    job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value') }}",
+    step_id="{{ task_instance.xcom_pull(task_ids='add_etl_step', key='return_value')[0] }}",
     aws_conn_id='aws_default',
     dag=dag,
 )
@@ -143,15 +178,15 @@ etl_step_checker = EmrStepSensor(
 # Add Glue Crawler to DAG
 # --------------------------------------
 glue_crawler_task = GlueCrawlerOperator(
-    task_id='run_glue_crawler_q1',
+    task_id='run_glue_crawler',
     config = {
-        'Name': 'glue_crawler_output_q1',
-        'Role': 'arn:aws:iam::761018854594:role/AWSGlueServiceRole-project-q1-v1',                    # [TO DO] create role
-        'DatabaseName': 'q1-processed-data-schema',                                                   # [TO DO] change database name
+        'Name': 'glue_crawler_output',
+        'Role': 'arn:aws:iam::761018854594:role/AWSGlueServiceRole-project-q1-v1',
+        'DatabaseName': 'q1-processed-data-schema',
         'Targets': {
             'S3Targets': [                                                                            # 2. UPDATE TARGET TO PROCESSED DATA FOLDERS
                 {
-                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/final_q1_df/',
+                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/final_df/',
                     'Exclusions': [],
                     'SampleSize': 2,
                 },
@@ -166,14 +201,14 @@ glue_crawler_task = GlueCrawlerOperator(
 # Add Athena Query Task to DAG
 # --------------------------------------
 athena_query_task = AthenaOperator(
-    task_id='execute_athena_query_q1',
+    task_id='execute_athena_query'
     query="""
         SELECT 
             *
-        FROM "q1-processed-data-schema"."final_q1_df"
+        FROM "q1-processed-data-schema"."final_df"
     """,
     database='"q1-processed-data-schema"',
-    output_location='s3://is459-g1t7-smart-meters-in-london/athena-results/final_q1_df/',
+    output_location='s3://is459-g1t7-smart-meters-in-london/athena-results/final_df/',
     workgroup='primary',
     aws_conn_id='aws_default',
     dag=dag,
@@ -183,8 +218,8 @@ athena_query_task = AthenaOperator(
 # Terminate EMR Cluster
 # --------------------------------------
 cluster_terminator = EmrTerminateJobFlowOperator(
-    task_id='terminate_emr_cluster_q1',
-    job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster_q1', key='return_value') }}",
+    task_id='terminate_emr_cluster',
+    job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value') }}",
     aws_conn_id='aws_default',
     dag=dag,
 )
@@ -192,4 +227,4 @@ cluster_terminator = EmrTerminateJobFlowOperator(
 # --------------------------------------
 # Define DAG Dependency
 # --------------------------------------
-cluster_creator >> etl_step_adder >> etl_step_checker >> glue_crawler_task >> athena_query_task >> cluster_terminator
+cluster_creator >> merge_data_step_adder >> merge_data_step_checker >> etl_step_adder >> etl_step_checker >> glue_crawler_task >> athena_query_task >> cluster_terminator
