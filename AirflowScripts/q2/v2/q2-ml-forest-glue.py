@@ -29,8 +29,8 @@ print("Spark session created successfully!")
 
 # Define Glue database and table names
 glue_database = "q2-processed-data-output"
-glue_table = "merged_df1_df3_df7_df8"
-s3_fallback_path = "s3a://is459-g1t7-smart-meters-in-london/processed-data/merged_df1_df3_df7_df8"
+glue_table = "merged_daily_weather_data"
+s3_fallback_path = "s3a://is459-g1t7-smart-meters-in-london/processed-data/merged_daily_weather_data"
 
 # Try multiple methods to load the data
 print(f"Attempting to load data from Glue catalog: {glue_database}.{glue_table}")

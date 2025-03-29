@@ -38,17 +38,21 @@ JOB_FLOW_OVERRIDES = {
         {'Name': 'JupyterEnterpriseGateway'},
         {'Name': 'Hue'},
     ],
-    # 'Configurations': [
-    #     {
-    #         'Classification': 'spark',
-    #         'Properties': {
-    #             'spark.executor.memoryOverhead': '2g',
-    #             'spark.executor.memory': '8g',
-    #             'spark.driver.memoryOverhead': '2g',
-    #             'spark.driver.memory': '8g',
-    #         },
-    #     },
-    # ],
+    'Configurations': [
+        {
+            'Classification': 'spark-hive-site',
+            'Properties': {
+                'hive.metastore.client.factory.class': 'com.amazonaws.glue.catalog.metastore.AWSGlueDataCatalogHiveClientFactory'
+            }
+        },
+        {
+            'Classification': 'spark-defaults',
+            'Properties': {
+                'spark.sql.catalogImplementation': 'hive',
+                'spark.hadoop.hive.metastore.client.factory.class': 'com.amazonaws.glue.catalog.metastore.AWSGlueDataCatalogHiveClientFactory'
+            }
+        }
+    ],
     'BootstrapActions': [
         {
             'Name': 'Install Dependencies',
@@ -101,6 +105,36 @@ cluster_creator = EmrCreateJobFlowOperator(
     dag=dag,
 )
 
+# Add Merge Data Step to the EMR cluster
+merge_data_step_adder = EmrAddStepsOperator(
+    task_id='add_merge_data_step',
+    job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value') }}",
+    steps=[
+        {
+            'Name': 'Merge Daily Data',
+            'HadoopJarStep': {
+                'Jar': 'command-runner.jar',
+                'Args': [
+                    'spark-submit',
+                    '--deploy-mode', 'cluster',
+                    '--master', 'yarn',
+                    "s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/q2-merge-daily-data.py",
+                ],
+            },
+        }
+    ],
+    aws_conn_id='aws_default',
+    dag=dag,
+)
+
+# Wait for the Merge Data step to complete
+merge_data_step_checker = EmrStepSensor(
+    task_id='watch_merge_data_step',
+    job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value') }}",
+    step_id="{{ task_instance.xcom_pull(task_ids='add_merge_data_step', key='return_value')[0] }}",
+    aws_conn_id='aws_default',
+    dag=dag,
+)
 
 # Add ETL Step to the EMR cluster
 etl_step_adder = EmrAddStepsOperator(
@@ -133,7 +167,28 @@ etl_step_checker = EmrStepSensor(
     dag=dag,
 )
 
-# Add q2-ml-forest step to the EMR cluster
+# Add a Glue Crawler to the DAG - Moved before ML step
+glue_crawler_task = GlueCrawlerOperator(
+    task_id='run_glue_crawler',
+    config = {
+        'Name': 'q2-ml-forest-output-crawler',
+        'Role': 'arn:aws:iam::761018854594:role/service-role/AWSGlueServiceRole-project-q2-real',  # Ensure this role exists
+        'DatabaseName': 'q2-processed-data-output',  # Ensure this database exists
+        'Targets': {
+            'S3Targets': [
+                {
+                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df1_df3_df7_df8/',
+                    'Exclusions': [],
+                    'SampleSize': 2,
+                },
+            ],
+        },
+    },
+    aws_conn_id='aws_default',
+    dag=dag,
+)
+
+# Add q2-ml-forest step to the EMR cluster - Now after the Glue crawler
 ml_forest_step_adder = EmrAddStepsOperator(
     task_id='add_ml_forest_step',
     job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value') }}",
@@ -146,7 +201,7 @@ ml_forest_step_adder = EmrAddStepsOperator(
                     'spark-submit',
                     '--deploy-mode', 'cluster',
                     '--master', 'yarn',
-                    "s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/q2-ml-forest.py",
+                    "s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/q2-ml-forest-glue.py",
                 ],
             },
         },
@@ -222,27 +277,6 @@ forecast_step_checker = EmrStepSensor(
     dag=dag,
 )
 
-# Add a Glue Crawler to the DAG
-glue_crawler_task = GlueCrawlerOperator(
-    task_id='run_glue_crawler',
-    config = {
-        'Name': 'q2-ml-forest-output-crawler',
-        'Role': 'arn:aws:iam::761018854594:role/service-role/AWSGlueServiceRole-project-q2-real',  # Ensure this role exists
-        'DatabaseName': 'q2-processed-data-output',  # Ensure this database exists
-        'Targets': {
-            'S3Targets': [
-                {
-                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df1_df3_df7_df8/',
-                    'Exclusions': [],
-                    'SampleSize': 2,
-                },
-            ],
-        },
-    },
-    aws_conn_id='aws_default',
-    dag=dag,
-)
-
 # Terminate the EMR cluster
 cluster_terminator = EmrTerminateJobFlowOperator(
     task_id='terminate_emr_cluster',
@@ -251,5 +285,5 @@ cluster_terminator = EmrTerminateJobFlowOperator(
     dag=dag,
 )
 
-# Define the DAG dependencies
-cluster_creator >> etl_step_adder >> etl_step_checker >> ml_forest_step_adder >> ml_forest_step_checker >> weather_api_step_adder >> weather_api_step_checker >> forecast_step_adder >> forecast_step_checker >> glue_crawler_task >> cluster_terminator
+# Define the DAG dependencies - Updated to include merge data step before ETL
+cluster_creator >> merge_data_step_adder >> merge_data_step_checker >> etl_step_adder >> etl_step_checker >> glue_crawler_task >> ml_forest_step_adder >> ml_forest_step_checker >> weather_api_step_adder >> weather_api_step_checker >> forecast_step_adder >> forecast_step_checker >> cluster_terminator
