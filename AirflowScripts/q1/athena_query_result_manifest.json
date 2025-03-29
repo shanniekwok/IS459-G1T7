@@ -2,7 +2,7 @@
     "fileLocations": [
         {
             "URIs": [
-                "s3://is459-g1t7-smart-meters-in-london/athena-results/merged_df12_acorn_category/5e9c3f8c-d1dd-4c7f-be73-e492dcae751b.csv"
+                "s3://is459-g1t7-smart-meters-in-london/athena-results/final_q1_df/11031796-a8b2-46a9-8bb9-e5f8ad170581.csv"
             ]
         }
     ],
