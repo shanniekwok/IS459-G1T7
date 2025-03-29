@@ -65,7 +65,7 @@ def main():
     df2.show(5)
 
     print(f"Input df4 columns: {df4.columns}")
-    df12.show(5)
+    df4.show(5)
     
     print(f"Input df6 columns: {df6.columns}")
     df6.show(5)
@@ -77,7 +77,7 @@ def main():
     df12.show(5)
 
     print(f"Input df14 columns: {df14.columns}")
-    df12.show(5)
+    df14.show(5)
 
     # ---------- DROP UNNECESSARY ROWS ----------
 
@@ -88,10 +88,28 @@ def main():
     # Adjust the number of rows (N) in the stack() function based on the actual number of ACORN columns
     print(df4.columns)
     df4_melt = df4.selectExpr(
-        "`MAIN CATEGORIES`", "CATEGORIES", "REFERENCE",
-        "stack(9, 'ACORN-A', `ACORN-B`, 'ACORN-C', `ACORN-D`, 'ACORN-E', `ACORN-F`, " +
-        "'ACORN-G', `ACORN-H`, 'ACORN-I', `ACORN-J`, 'ACORN-K', `ACORN-K`, " +
-        "'ACORN-L', `ACORN-M`, 'ACORN-N', `ACORN-O`, 'ACORN-P', `ACORN-Q`) as (Acorn, Value)"
+        "`MAIN CATEGORIES`",
+        "CATEGORIES",
+        "REFERENCE",
+        "stack(19, " +
+        "  'ACORN-A', cast(`ACORN-A` as double), " +
+        "  'ACORN-B', cast(`ACORN-B` as double), " +
+        "  'ACORN-C', cast(`ACORN-C` as double), " +
+        "  'ACORN-D', cast(`ACORN-D` as double), " +
+        "  'ACORN-E', cast(`ACORN-E` as double), " +
+        "  'ACORN-F', cast(`ACORN-F` as double), " +
+        "  'ACORN-G', cast(`ACORN-G` as double), " +
+        "  'ACORN-H', cast(`ACORN-H` as double), " +
+        "  'ACORN-I', cast(`ACORN-I` as double), " +
+        "  'ACORN-J', cast(`ACORN-J` as double), " +
+        "  'ACORN-K', cast(`ACORN-K` as double), " +
+        "  'ACORN-L', cast(`ACORN-L` as double), " +
+        "  'ACORN-M', cast(`ACORN-M` as double), " +
+        "  'ACORN-N', cast(`ACORN-N` as double), " +
+        "  'ACORN-O', cast(`ACORN-O` as double), " +
+        "  'ACORN-P', cast(`ACORN-P` as double), " +
+        "  'ACORN-Q', cast(`ACORN-Q` as double) " +
+        ") as (Acorn, Value)"
     )
 
     # Cast column types
