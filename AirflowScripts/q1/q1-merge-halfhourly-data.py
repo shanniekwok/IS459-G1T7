@@ -11,7 +11,7 @@ def main():
 
     # Source and destination paths
     source_bucket = "is459-g1t7-smart-meters-in-london"
-    source_prefix = "raw-data/halfhourly_datasets/"
+    source_prefix = "raw-data/halfhourly_dataset/"
     
     # Temporary directory for the output
     temp_output_dir = "s3://is459-g1t7-smart-meters-in-london/raw-data/temp_halfhourly_dataset/"
