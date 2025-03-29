@@ -6,36 +6,36 @@ import os
 
 # from pyspark.sql.types import DecimalType
 
-# # S3 Paths
-# S3_INPUT_FOLDER = "s3://is459-g1t7-smart-meters-in-london/raw-data/"
-# S3_OUTPUT_FOLDER = "s3://is459-g1t7-smart-meters-in-london/processed-data/"
+# S3 Paths
+S3_INPUT_FOLDER = "s3://is459-g1t7-smart-meters-in-london/raw-data/"
+S3_OUTPUT_FOLDER = "s3://is459-g1t7-smart-meters-in-london/processed-data/"
 
 # Local folder paths (Replace with your actual folder path)
-LOCAL_INPUT_FOLDER = "/Users/liying/Desktop/smu/acads/Y4S2/IS459BDA/project/IS459-G1T7/data/"
-LOCAL_OUTPUT_FOLDER = "./processed/"
+# LOCAL_INPUT_FOLDER = "/Users/liying/Desktop/smu/acads/Y4S2/IS459BDA/project/IS459-G1T7/data/"
+# LOCAL_OUTPUT_FOLDER = "./processed/"
 
 def main():
     # Create Spark Session
     spark = SparkSession.builder.appName("SmartMetersProcessingQ1").getOrCreate()
 
     # ---------- READ INPUT FILES ----------
-    df2 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "2. halfhourly_dataset.csv"), header=True, inferSchema=True)
-    df4 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "4. acorn_details.csv"), header=True, inferSchema=True)
-    df6 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "6. informations_households.csv"), header=True, inferSchema=True)
-    df6 = df6.drop(df6["file"])
-    df10_1 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "acorn_information.csv"), header=True, inferSchema=True)
-    df10_reduced = df10_1.select("Acorn", "Acorn Category")
-    df12 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "tariff_type.csv"), header=True, inferSchema=True)
-    df14 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "property_type_energy_efficiency.csv"), header=True, inferSchema=True)
-
-    # df2 = spark.read.csv(f"{S3_INPUT_FOLDER}halfhourly_dataset.csv", header=True, inferSchema=True)
-    # df4 = spark.read.csv(f"{S3_INPUT_FOLDER}acorn_details.csv", header=True, inferSchema=True)
-    # df6 = spark.read.csv(f"{S3_INPUT_FOLDER}informations_households.csv", header=True, inferSchema=True)
+    # df2 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "2. halfhourly_dataset.csv"), header=True, inferSchema=True)
+    # df4 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "4. acorn_details.csv"), header=True, inferSchema=True)
+    # df6 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "6. informations_households.csv"), header=True, inferSchema=True)
     # df6 = df6.drop(df6["file"])
-    # df10_1 = spark.read.csv(f"{S3_INPUT_FOLDER}acorn_information.csv", header=True, inferSchema=True)
+    # df10_1 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "acorn_information.csv"), header=True, inferSchema=True)
     # df10_reduced = df10_1.select("Acorn", "Acorn Category")
-    # df12 = spark.read.csv(f"{S3_INPUT_FOLDER}tariff_type.csv", header=True, inferSchema=True)
-    # df14 = spark.read.csv(f"{S3_INPUT_FOLDER}property_type_energy_efficiency.csv", header=True, inferSchema=True)
+    # df12 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "tariff_type.csv"), header=True, inferSchema=True)
+    # df14 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "property_type_energy_efficiency.csv"), header=True, inferSchema=True)
+
+    df2 = spark.read.csv(f"{S3_INPUT_FOLDER}halfhourly_dataset.csv", header=True, inferSchema=True)
+    df4 = spark.read.csv(f"{S3_INPUT_FOLDER}acorn_details.csv", header=True, inferSchema=True)
+    df6 = spark.read.csv(f"{S3_INPUT_FOLDER}informations_households.csv", header=True, inferSchema=True)
+    df6 = df6.drop(df6["file"])
+    df10_1 = spark.read.csv(f"{S3_INPUT_FOLDER}acorn_information.csv", header=True, inferSchema=True)
+    df10_reduced = df10_1.select("Acorn", "Acorn Category")
+    df12 = spark.read.csv(f"{S3_INPUT_FOLDER}tariff_type.csv", header=True, inferSchema=True)
+    df14 = spark.read.csv(f"{S3_INPUT_FOLDER}property_type_energy_efficiency.csv", header=True, inferSchema=True)
 
     # ---------- CAST COLUMNS ----------
 
@@ -188,7 +188,7 @@ def main():
     merged_df2_df4_df6_df10_df12_df14.show(10)
 
     # ---------- WRITE THE FINAL DATAFRAME TO S3 AS PARQUET ----------
-    # merged_df2_df4_df6_df10_df12_df14.write.mode("overwrite").parquet(f"{S3_OUTPUT_FOLDER}final_q1_df")
+    merged_df2_df4_df6_df10_df12_df14.write.mode("overwrite").parquet(f"{S3_OUTPUT_FOLDER}final_q1_df")
     print("Processed datasets successfully written to S3 as Parquet!")
 
     # Stop Spark session
