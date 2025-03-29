@@ -119,7 +119,7 @@ etl_step_adder = EmrAddStepsOperator(
                     'spark-submit',
                     '--deploy-mode', 'cluster',
                     '--master', 'yarn',
-                    "s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/q1-etl-pyspark.py"
+                    "s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/q1-etl-pyspark.py",      # 1. CHANGE TO LATEST SPARK CODE
                 ],
             },
         }
@@ -146,10 +146,10 @@ glue_crawler_task = GlueCrawlerOperator(
     task_id='run_glue_crawler_q1',
     config = {
         'Name': 'glue_crawler_output_q1',
-        'Role': 'arn:aws:iam::761018854594:role/AWSGlueServiceRole-project-q1-v1',
-        'DatabaseName': 'q1-processed-data-schema',
+        'Role': 'arn:aws:iam::761018854594:role/AWSGlueServiceRole-project-q1-v1',                    # [TO DO] create role
+        'DatabaseName': 'q1-processed-data-schema',                                                   # [TO DO] change database name
         'Targets': {
-            'S3Targets': [
+            'S3Targets': [                                                                            # 2. UPDATE TARGET TO PROCESSED DATA FOLDERS
                 {
                     'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/final_q1_df/',
                     'Exclusions': [],
@@ -166,7 +166,7 @@ glue_crawler_task = GlueCrawlerOperator(
 # Add Athena Query Task to DAG
 # --------------------------------------
 athena_query_task = AthenaOperator(
-    task_id='execute_athena_query_q1'
+    task_id='execute_athena_query_q1',
     query="""
         SELECT 
             *
@@ -192,4 +192,4 @@ cluster_terminator = EmrTerminateJobFlowOperator(
 # --------------------------------------
 # Define DAG Dependency
 # --------------------------------------
-cluster_creator >> etl_step_adder >> etl_step_checker >> glue_crawler_task >> athena_query_task1 >> athena_query_task2 >> athena_query_task3 >> cluster_terminator
+cluster_creator >> etl_step_adder >> etl_step_checker >> glue_crawler_task >> athena_query_task >> cluster_terminator
