@@ -13,6 +13,7 @@ def main():
     # ---------- READ INPUT FILES ----------
     df2 = spark.read.csv(f"{S3_INPUT_FOLDER}halfhourly_dataset.csv", header=True, inferSchema=True)
     df6 = spark.read.csv(f"{S3_INPUT_FOLDER}informations_households.csv", header=True, inferSchema=True)
+    df6 = df6.drop(df6["file"])
     df10_1 = spark.read.csv(f"{S3_INPUT_FOLDER}acorn_information.csv", header=True, inferSchema=True)
     df10_reduced = df10_1.select("Acorn", "Acorn Category")
     df12 = spark.read.csv(f"{S3_INPUT_FOLDER}tariff_type.csv", header=True, inferSchema=True)
@@ -32,7 +33,6 @@ def main():
     df12 = df12.withColumn("TariffDateTime", col("TariffDateTime").cast("string"))
     df12 = df12.withColumn("Tariff", col("Tariff").cast("string"))
     df12 = df12.withColumn("TariffDateTime", to_timestamp("TariffDateTime", "M/d/yy HH:mm"))
-    
 
     print("\n----------------------------------------------------")
     print("Reading input files:")
@@ -50,48 +50,43 @@ def main():
 
     # ---------- DROP UNNECESSARY ROWS ----------
     df2 = df2.na.drop(subset=["energy(kWh/hh)"])
-    
-    # Use an alias for df12 in the first join so that the original df12 remains intact
-    df2 = df2.join(df12.alias("df12_first"), df2.tstp == col("df12_first.TariffDateTime"), "inner")
-
-    print("\n----------------------------------------------------")
-    print("After merging df2 with df12 (aliased as df12_first):")
-    print(f"df2 columns: {df2.columns}")
-    df2.show(10)
 
     # ---------- MERGE DATAFRAMES ----------
-    merged_df2_df6 = df2.join(df6, on="LCLid", how="left")
+    
+    # MERGE 1: df2 & df6
     print("\n----------------------------------------------------")
+    print("Merging df2 & df6:")
+    merged_df2_df6 = df2.join(df6, on="LCLid", how="left")
     print("After merging df2 and df6:")
     print(f"Columns: {merged_df2_df6.columns}")
     merged_df2_df6.show(10)
 
-    merged_df2_df6_df10 = merged_df2_df6.join(df10_reduced, on="Acorn", how="left")
+    # MERGE 2: df2 & df6 & df10
     print("\n----------------------------------------------------")
+    print("Merging df2 & df6 & df10:")
+    merged_df2_df6_df10 = merged_df2_df6.join(df10_reduced, on="Acorn", how="left")
     print("After merging with acorn info (df10):")
     print(f"Columns: {merged_df2_df6_df10.columns}")
     merged_df2_df6_df10.show(10)
-
-    # ---------- AGGREGATE ENERGY BY ACORN DETAILS ----------
-    acorn_energy = merged_df2_df6_df10.groupBy("tstp", "Acorn", "Acorn_grouped", "Acorn Category") \
-                                    .agg(mean("energy(kWh/hh)").alias("mean_energy"))
-
-    # ---------- FINAL JOIN ----------
-    # Here we use the original df12 for the final join
-    merged_final = df12.join(acorn_energy, df12.TariffDateTime == acorn_energy.tstp, "left")
+    
+    # MERGE 3: df2 & df6 & df10 & df12
     print("\n----------------------------------------------------")
-    print("After final join with df12 and acorn_energy:")
-    print(f"Final columns: {merged_final.columns}")
+    print("Merging df2 & df6 & df10 & df12:")
+    merged_df2_df6_df10_df12 = merged_df2_df6_df10.join(df12, merged_df2_df6_df10["tstp"] == df12["TariffDateTime"], how="inner")
+    merged_df2_df6_df10_df12 = merged_df2_df6_df10_df12.drop(df12["TariffDateTime"])
+    print("After merging with tariff info (df12):")
+    print(f"Columns: {merged_df2_df6_df10_df12.columns}")
+    merged_df2_df6_df10_df12.show(10)
 
     print("\n----------------------------------------------------")
     print("Schema of final DataFrame:")
-    merged_final.printSchema()
+    merged_df2_df6_df10_df12.printSchema()
 
-    print(f"Number of rows: {merged_final.count()}")
-    merged_final.show(5)
+    print(f"Number of rows: {merged_df2_df6_df10_df12.count()}")
+    merged_df2_df6_df10_df12.show(10)
 
     # ---------- WRITE THE FINAL DATAFRAME TO S3 AS PARQUET ----------
-    merged_final.write.mode("overwrite").parquet(f"{S3_OUTPUT_FOLDER}final_q1_df")
+    merged_df2_df6_df10_df12.write.mode("overwrite").parquet(f"{S3_OUTPUT_FOLDER}final_q1_df")
     print("Processed datasets successfully written to S3 as Parquet!")
 
     # Stop Spark session
