@@ -1,6 +1,6 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, mean
-from pyspark.sql.types import DecimalType
+from pyspark.sql.functions import col, mean, to_timestamp
+# from pyspark.sql.types import DecimalType
 
 # S3 Paths
 S3_INPUT_FOLDER = "s3://is459-g1t7-smart-meters-in-london/raw-data/"
@@ -20,7 +20,7 @@ def main():
     # ---------- CAST COLUMNS ----------
     df2 = df2.withColumn("LCLid", col("LCLid").cast("string"))
     df2 = df2.withColumn("tstp", col("tstp").cast("string"))
-    df2 = df2.withColumn("energy(kWh/hh)", col("energy(kWh/hh)").cast("decimal"))
+    df2 = df2.withColumn("energy(kWh/hh)", col("energy(kWh/hh)").cast("double"))
 
     df6 = df6.withColumn("stdorToU", col("stdorToU").cast("string"))
     df6 = df6.withColumn("Acorn", col("Acorn").cast("string"))
@@ -31,13 +31,22 @@ def main():
 
     df12 = df12.withColumn("TariffDateTime", col("TariffDateTime").cast("string"))
     df12 = df12.withColumn("Tariff", col("Tariff").cast("string"))
+    df12 = df12.withColumn("TariffDateTime", to_timestamp("TariffDateTime", "M/d/yy HH:mm"))
+    
 
     print("\n----------------------------------------------------")
     print("Reading input files:")
     print(f"Input df2 columns: {df2.columns}")
+    df2.show(5)
+    
     print(f"Input df6 columns: {df6.columns}")
+    df6.show(5)
+    
     print(f"Input df10 columns: {df10_reduced.columns}")
+    df10_reduced.show(5)
+    
     print(f"Input df12 columns: {df12.columns}")
+    df12.show(5)
 
     # ---------- DROP UNNECESSARY ROWS ----------
     df2 = df2.na.drop(subset=["energy(kWh/hh)"])
@@ -48,17 +57,20 @@ def main():
     print("\n----------------------------------------------------")
     print("After merging df2 with df12 (aliased as df12_first):")
     print(f"df2 columns: {df2.columns}")
+    df2.show(10)
 
     # ---------- MERGE DATAFRAMES ----------
     merged_df2_df6 = df2.join(df6, on="LCLid", how="left")
     print("\n----------------------------------------------------")
     print("After merging df2 and df6:")
     print(f"Columns: {merged_df2_df6.columns}")
+    merged_df2_df6.show(10)
 
     merged_df2_df6_df10 = merged_df2_df6.join(df10_reduced, on="Acorn", how="left")
     print("\n----------------------------------------------------")
     print("After merging with acorn info (df10):")
     print(f"Columns: {merged_df2_df6_df10.columns}")
+    merged_df2_df6_df10.show(10)
 
     # ---------- AGGREGATE ENERGY BY ACORN DETAILS ----------
     acorn_energy = merged_df2_df6_df10.groupBy("tstp", "Acorn", "Acorn_grouped", "Acorn Category") \
