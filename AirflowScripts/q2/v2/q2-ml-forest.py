@@ -17,6 +17,7 @@ findspark.init()
 # Create Spark session
 spark = SparkSession.builder \
     .appName("EnergyPrediction") \
+    .config("spark.sql.legacy.timeParserPolicy", "LEGACY") \
     .config("spark.driver.memory", "12g") \
     .config("spark.executor.memory", "6g") \
     .config("spark.dynamicAllocation.enabled", "false") \
