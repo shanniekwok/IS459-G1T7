@@ -23,7 +23,7 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 # Load Parquet file
-s3_path = "s3a://is459-g1t7-smart-meters-in-london/processed-data/merged_df1_df3_df7_df8"
+s3_path = "s3a://is459-g1t7-smart-meters-in-london/processed-data/merged_daily_weather_data"
 df_spark = spark.read.parquet(s3_path)
 
 # Define features

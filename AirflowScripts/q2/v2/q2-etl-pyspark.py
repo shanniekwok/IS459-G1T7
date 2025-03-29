@@ -118,7 +118,7 @@ def parse_and_join_dataframes(df1, df7, df8, s3_output_folder):
 def main():
     # S3 paths
     S3_INPUT_FOLDER = "s3://is459-g1t7-smart-meters-in-london/raw-data/"
-    S3_OUTPUT_FOLDER = "s3://is459-g1t7-smart-meters-in-london/processed-data/merged_df1_df3_df7_df8"
+    S3_OUTPUT_FOLDER = "s3://is459-g1t7-smart-meters-in-london/processed-data/merged_daily_weather_data"
     
     # Create Spark session
     spark = create_spark_session()
