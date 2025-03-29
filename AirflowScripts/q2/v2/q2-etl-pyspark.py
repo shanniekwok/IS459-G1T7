@@ -24,7 +24,7 @@ def read_csv_from_s3(spark, s3_path, file_name):
     """
     return spark.read.csv(f"{s3_path}{file_name}", header=True, inferSchema=True)
 
-def parse_and_join_dataframes(df1, df7, df8, s3_output_folder):
+def parse_and_join_dataframes(df1, df7, df8):
     """
     Parse dates and join dataframes
     
@@ -108,10 +108,7 @@ def parse_and_join_dataframes(df1, df7, df8, s3_output_folder):
     # Add the previous day's energy sum
     merged_df = merged_df.withColumn("prev_day_energy_sum", lag("energy_sum", 1).over(window_spec))
     
-    # Write to Parquet
-    merged_df.write \
-        .mode("overwrite") \
-        .parquet(s3_output_folder)
+    
     
     return merged_df
 
@@ -130,12 +127,15 @@ def main():
         df8 = read_csv_from_s3(spark, S3_INPUT_FOLDER, "uk_bank_holidays.csv")
 
         # Parse and join dataframes
-        merged_df = parse_and_join_dataframes(df1, df7, df8, S3_OUTPUT_FOLDER)
+        merged_df = parse_and_join_dataframes(df1, df7, df8)
         
         # Show sample of merged dataframe
         merged_df.show()
 
         print("Number of rows in merged dataframe: ", merged_df.count())
+
+        # Write to Parquet
+        merged_df.write.mode("overwrite").parquet(S3_OUTPUT_FOLDER)
         
         print(f"Merged dataframe successfully written to {S3_OUTPUT_FOLDER}")
     
