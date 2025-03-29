@@ -30,9 +30,9 @@ def main():
     df10_1 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "10. acorn_information.csv"), header=True, inferSchema=True)
     df10_reduced = df10_1.select("Acorn", "Acorn Category")
     df12 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "12. tariff_type.csv"), header=True, inferSchema=True)
-    df14 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "14. property_type_energy_efficiency.csv"))
+    df14 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "14. property_type_energy_efficiency.csv"), header=True, inferSchema=True)
 
-    # ---------- CAST COLUMNS ----------
+# ---------- CAST COLUMNS ----------
 
     df2 = df2.withColumn("LCLid", col("LCLid").cast("string"))
     df2 = df2.withColumn("tstp", col("tstp").cast("string"))
@@ -56,7 +56,7 @@ def main():
     df14 = df14.withColumn("Housing Type", col("Housing Type").cast("string"))
     df14 = df14.withColumn("Current Efficiency", col("Current Efficiency").cast("double"))
     df14 = df14.withColumn("Potential Efficiency", col("Potential Efficiency").cast("double"))
-    df14 = df14.withColumn("Difference", col("PDifference").cast("double"))
+    df14 = df14.withColumn("Difference", col("Difference").cast("double"))
 
     print("\n----------------------------------------------------")
     print("Reading input files:")
@@ -85,11 +85,12 @@ def main():
     # ---------- PROCESS ACORN DETAILS ----------
     # Emulate melt with stack:
     # Adjust the number of rows (N) in the stack() function based on the actual number of ACORN columns
+    print(df4.columns)
     df4_melt = df4.selectExpr(
         "`MAIN CATEGORIES`", "CATEGORIES", "REFERENCE",
-        "stack(9, 'ACORN-1', `ACORN-1`, 'ACORN-2', `ACORN-2`, 'ACORN-3', `ACORN-3`, " +
-        "'ACORN-4', `ACORN-4`, 'ACORN-5', `ACORN-5`, 'ACORN-6', `ACORN-6`, " +
-        "'ACORN-7', `ACORN-7`, 'ACORN-8', `ACORN-8`, 'ACORN-9', `ACORN-9`) as (Acorn, Value)"
+        "stack(9, 'ACORN-A', `ACORN-B`, 'ACORN-C', `ACORN-D`, 'ACORN-E', `ACORN-F`, " +
+        "'ACORN-G', `ACORN-H`, 'ACORN-I', `ACORN-J`, 'ACORN-K', `ACORN-K`, " +
+        "'ACORN-L', `ACORN-M`, 'ACORN-N', `ACORN-O`, 'ACORN-P', `ACORN-Q`) as (Acorn, Value)"
     )
 
     # Cast column types
@@ -98,7 +99,7 @@ def main():
 
     # Calculate Total and Percentage using a window partitioned by MAIN CATEGORIES, CATEGORIES, and Acorn
     window_spec = Window.partitionBy("MAIN CATEGORIES", "CATEGORIES", "Acorn")
-    df4_melt = df4_melt.withColumn("Total", spark_sum("Value").over(window_spec))
+    df4_melt = df4_melt.withColumn("Total", F.sum("Value").over(window_spec))
     df4_melt = df4_melt.withColumn("Percentage", col("Value") / col("Total"))
 
     # Cast column types
@@ -124,8 +125,8 @@ def main():
 
     # Group by Acorn and sum the values
     final_df4_df14 = merged_df4_df14.groupBy("Acorn").agg(
-        spark_sum("Efficiency_Value").alias("Efficiency_Value"),
-        spark_sum("Potential_Value").alias("Potential_Value")
+        F.sum("Efficiency_Value").alias("Efficiency_Value"),
+        F.sum("Potential_Value").alias("Potential_Value")
     )
     final_df4_df14 = final_df4_df14.withColumn("Difference_Value", col("Potential_Value") - col("Efficiency_Value"))
 
@@ -183,7 +184,7 @@ def main():
 
     # ---------- WRITE THE FINAL DATAFRAME TO S3 AS PARQUET ----------
     # merged_df2_df4_df6_df10_df12_df14.write.mode("overwrite").parquet(f"{S3_OUTPUT_FOLDER}final_q1_df")
-    # print("Processed datasets successfully written to S3 as Parquet!")
+    print("Processed datasets successfully written to S3 as Parquet!")
 
     # Stop Spark session
     spark.stop()
