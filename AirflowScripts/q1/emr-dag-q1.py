@@ -201,7 +201,7 @@ glue_crawler_task = GlueCrawlerOperator(
 # Add Athena Query Task to DAG
 # --------------------------------------
 athena_query_task = AthenaOperator(
-    task_id='execute_athena_query'
+    task_id='execute_athena_query',
     query="""
         SELECT 
             *
