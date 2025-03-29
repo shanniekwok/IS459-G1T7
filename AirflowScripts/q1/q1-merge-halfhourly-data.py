@@ -7,6 +7,8 @@ def main():
     spark = SparkSession.builder \
         .appName("Combine CSV Files") \
         .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
+        .config("spark.driver.memory", "4g") \
+        .config("spark.executor.memory", "4g") \
         .getOrCreate()
 
     # Source and destination paths
