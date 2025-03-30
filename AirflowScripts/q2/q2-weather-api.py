@@ -65,9 +65,6 @@ for forecast in forecast_list:
 # Convert to DataFrame
 df_weather = pd.DataFrame(weather_records)
 
-# Encode precipType (Rain, Snow, Clear, etc.)
-df_weather["precipType"] = df_weather["precipType"].map({"Rain": 1, "Snow": 2, "Clear": 0}).fillna(0).astype(int)
-
 # Show Data
 print(df_weather.head())
 

@@ -35,7 +35,6 @@ features = [
     "temperaturehigh", "daylight_duration"
 ]
 
-
 target = "energy_mean"
 
 # Handle missing values in Spark DataFrame
