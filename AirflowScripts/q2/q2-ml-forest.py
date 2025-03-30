@@ -17,28 +17,33 @@ findspark.init()
 # Create Spark session
 spark = SparkSession.builder \
     .appName("EnergyPrediction") \
+    .config("spark.sql.legacy.timeParserPolicy", "LEGACY") \
     .config("spark.driver.memory", "12g") \
     .config("spark.executor.memory", "6g") \
     .config("spark.dynamicAllocation.enabled", "false") \
     .getOrCreate()
 
+# Add this right after creating your Spark session
+spark.conf.set("spark.sql.legacy.parquet.nanosAsLong", "true")
+
 # Load Parquet file
-# s3_path = "s3a://is459-g1t7-smart-meters-in-london/processed-data/merged_df1_df3_df7_df8"
-s3_path = "s3a://is459-g1t7-smart-meters-in-london/processed-data/merged_q2_daily"
+s3_path = "s3a://is459-g1t7-smart-meters-in-london/processed-data/merged_daily_weather_data"
 df_spark = spark.read.parquet(s3_path)
 
 # Define features
 features = [
     "temperatureMax", "temperatureMin", "temperatureHigh", "temperatureLow",
     "apparentTemperatureHigh", "apparentTemperatureLow", "apparentTemperatureMin", "apparentTemperatureMax",
-    "pressure", "humidity", "cloudCover", "windSpeed", "windBearing", 
-    "precipType"
+    "pressure", "humidity", "cloudCover", "windSpeed", "windBearing", "precipType", "visibility", "temp_variation",
+    "temp_humidity_interaction", "temp_cloudcover_interaction", "temp_uvindex_interaction",
+    "weekend_energy_interaction", "holiday_energy_interaction", "temp_daylight_interaction",
+    "daylight_duration"
 ]
 
 target = "energy_mean"
 
 # Handle missing values in Spark DataFrame
-# df_spark = df_spark.dropna(subset=["energy_sum"]) # commented as this is already dropped during ETL
+df_spark = df_spark.dropna(subset=["energy_sum"])
 
 # Handle precipType in Spark
 if "precipType" in df_spark.columns:
