@@ -50,14 +50,14 @@ JOB_FLOW_OVERRIDES = {
         {'Name': 'JupyterEnterpriseGateway'},
         {'Name': 'Hue'},
     ],
-    # 'BootstrapActions': [
-    #     {
-    #         'Name': 'Install Dependencies',
-    #         'ScriptBootstrapAction': {
-    #             'Path': 's3://is459-g1t7-smart-meters-in-london/bootstrap/emr-setup-q1.sh', # [TO DO] upload .sh config file
-    #         }
-    #     },
-    # ],
+    'BootstrapActions': [
+        {
+            'Name': 'Install Dependencies',
+            'ScriptBootstrapAction': {
+                'Path': 's3://is459-g1t7-smart-meters-in-london/bootstrap/emr-setup-q1.sh', # [TO DO] upload .sh config file
+            }
+        },
+    ],
     'Instances': {
         'InstanceGroups': [
             {
