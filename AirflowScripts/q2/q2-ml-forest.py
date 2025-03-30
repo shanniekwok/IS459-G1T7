@@ -150,7 +150,7 @@ print(f"Random Forest model saved successfully at: s3://{bucket_name}/{key}")
 print("\n📦 Generating Actual vs Predicted CSVs for selected LCLids...")
 
 # Re-evaluate test set with LCLid
-test_pd_with_lclid = test_df.select(["lclid"] + features + [target]).dropna().toPandas()
+test_pd_with_lclid = test_df.select(["lclid", "date"] + features + [target]).dropna().toPandas()
 X_full = test_pd_with_lclid[features]
 y_full = test_pd_with_lclid[target]
 lclids = test_pd_with_lclid["lclid"]
@@ -159,6 +159,7 @@ y_full_preds = rf_model.predict(X_full)
 
 full_predictions_df = pd.DataFrame({
     "LCLid": lclids,
+    "Date": test_pd_with_lclid["date"],
     "Actual": y_full.values,
     "Predicted": y_full_preds
 })
@@ -179,7 +180,7 @@ for lclid in selected_lclids:
     s3_key = f"{s3_prefix}/{lclid}-Actual-vs-Predicted.csv"
     try:
         s3.Bucket(bucket_name).upload_file(local_path, s3_key)
-        print(f"✅ Uploaded: s3://{bucket_name}/{s3_key}")
+        print(f"Uploaded: s3://{bucket_name}/{s3_key}")
     except Exception as e:
         print(f"Failed to upload {lclid}: {e}")
     finally:
