@@ -27,22 +27,27 @@ forecast_list = weather_data["list"]
 # Extract Relevant Features
 weather_records = []
 for forecast in forecast_list:
+    dt = datetime.utcfromtimestamp(forecast["dt"])
+    is_weekend = 1 if dt.weekday() >= 5 else 0
+
+    sunrise = forecast.get("sunrise")
+    sunset = forecast.get("sunset")
+    daylight_duration = (sunset - sunrise) / 3600 if sunset and sunrise else None  # in hours
+
+    temperatureMax = forecast["temp"]["max"]
+    
     record = {
-        "date": datetime.utcfromtimestamp(forecast["dt"]).strftime('%Y-%m-%d'),  # Extract date only (YYYY-MM-DD)
-        "temperatureMax": forecast["temp"]["max"],  
-        "temperatureMin": forecast["temp"]["min"],  
-        "temperatureHigh": forecast["temp"]["day"],  
-        "temperatureLow": forecast["temp"]["night"],  
-        "apparentTemperatureHigh": forecast["feels_like"]["day"],  
-        "apparentTemperatureLow": forecast["feels_like"]["night"],  
-        "apparentTemperatureMin": forecast["feels_like"]["night"],  
-        "apparentTemperatureMax": forecast["feels_like"]["day"],  
-        "pressure": forecast["pressure"],  
-        "humidity": forecast["humidity"],  
-        "cloudCover": forecast["clouds"],  
-        "windSpeed": forecast["speed"],  
-        "windBearing": forecast["deg"],  
-        "precipType": forecast.get("weather", [{}])[0].get("main", "Clear"),  
+        "date": dt.strftime('%Y-%m-%d'),
+        "is_weekend": is_weekend,
+        "temperaturemax": temperatureMax,
+        "temperaturemin": forecast["temp"]["min"],
+        "pressure": forecast["pressure"],
+        "humidity": forecast["humidity"],
+        "cloudcover": forecast["clouds"],
+        "windspeed": forecast["speed"],
+        "windbearing": forecast["deg"],
+        "daylight_duration": daylight_duration,
+        "temp_daylight_interaction": temperatureMax * daylight_duration if daylight_duration else None
     }
     weather_records.append(record)
 

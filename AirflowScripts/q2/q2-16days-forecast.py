@@ -10,7 +10,7 @@ import tempfile
 s3 = boto3.client('s3')
 bucket_name = 'is459-g1t7-smart-meters-in-london'
 
-# **Step 1: Load the saved weather forecast data from S3**
+# Load the saved weather forecast data from S3
 weather_s3_path = 'weather-api-results/london_weather_forecast.csv'
 print(f"Loading weather data from s3://{bucket_name}/{weather_s3_path}")
 
@@ -25,7 +25,7 @@ except Exception as e:
     print(f"Error loading weather data: {e}")
     exit()
 
-# **Step 2: Load the trained Random Forest model from S3**
+# Load the trained Random Forest model from S3
 model_s3_path = 'ml-models/randomforest.pkl'
 print(f"Loading model from s3://{bucket_name}/{model_s3_path}")
 
@@ -43,18 +43,16 @@ except Exception as e:
     print(f"Error loading model: {e}")
     exit()
 
-# **Step 3: Ensure the weather data has the correct feature set**
+# Ensure the weather data has the correct feature set
 features = [
-    "temperatureMax", "temperatureMin", "temperatureHigh", "temperatureLow",
-    "apparentTemperatureHigh", "apparentTemperatureLow", "apparentTemperatureMin", "apparentTemperatureMax",
-    "pressure", "humidity", "cloudCover", "windSpeed", "windBearing",
-    "precipType"
+    "temp_daylight_interaction", "is_weekend", "pressure",
+    "temperaturemax", "temperaturemin", "windbearing", "windspeed", "humidity", "cloudcover"
 ]
 
 # Ensure weather data only includes the required features
 df_features = df_weather[features]
 
-# Step 4: Make predictions
+# Make predictions
 predictions = rf_model.predict(df_features)
 
 # Convert predictions to DataFrame
@@ -63,7 +61,7 @@ df_predictions = pd.DataFrame({
     "Predicted_Energy_Consumption": predictions
 })
 
-# Step 5: Save predictions to S3
+# Save predictions to S3
 output_s3_path = 'ml-output/london_energy_predictions.csv'
 print(f"Saving predictions to s3://{bucket_name}/{output_s3_path}")
 
@@ -82,6 +80,6 @@ try:
 except Exception as e:
     print(f"Error saving predictions: {e}")
 
-# Step 6: Display first 5 predictions
+# Display first 5 predictions
 print("\nFirst 5 predictions:")
 print(df_predictions.head())

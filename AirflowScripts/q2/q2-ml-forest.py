@@ -32,38 +32,14 @@ df_spark = spark.read.parquet(s3_path)
 
 # Define features
 features = [
-    "temperatureMax", "temperatureMin", "temperatureHigh", "temperatureLow",
-    "apparentTemperatureHigh", "apparentTemperatureLow", "apparentTemperatureMin", "apparentTemperatureMax",
-    "pressure", "humidity", "cloudCover", "windSpeed", "windBearing", "precipType", "visibility", "temp_variation",
-    "temp_humidity_interaction", "temp_cloudcover_interaction", "temp_uvindex_interaction",
-    "weekend_energy_interaction", "holiday_energy_interaction", "temp_daylight_interaction",
-    "daylight_duration"
+    "temp_daylight_interaction", "is_weekend", "pressure",
+    "temperaturemax", "temperaturemin", "windbearing", "windspeed", "humidity", "cloudcover"
 ]
 
 target = "energy_mean"
 
 # Handle missing values in Spark DataFrame
-df_spark = df_spark.dropna(subset=["energy_sum"])
-
-# Handle precipType in Spark
-if "precipType" in df_spark.columns:
-    df_spark = df_spark.fillna({"precipType": "none"})
-    
-    # Get unique precipType values to encode
-    precip_types = [row['precipType'] for row in df_spark.select('precipType').distinct().collect()]
-    
-    # Create a mapping dictionary for precipitation types
-    precip_map = {val: idx for idx, val in enumerate(precip_types)}
-    
-    # Apply the mapping using Spark functions
-    mapping_expr = None
-    for val, idx in precip_map.items():
-        if mapping_expr is None:
-            mapping_expr = when(col("precipType") == val, lit(idx))
-        else:
-            mapping_expr = mapping_expr.when(col("precipType") == val, lit(idx))
-    
-    df_spark = df_spark.withColumn("precipType", mapping_expr)
+df_spark = df_spark.dropna(subset=[target])
 
 # Calculate the total number of rows
 total_rows = df_spark.count()
