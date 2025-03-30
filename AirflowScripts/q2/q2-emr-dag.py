@@ -7,6 +7,7 @@ from airflow.providers.amazon.aws.operators.emr import (
 )
 from airflow.providers.amazon.aws.sensors.emr import EmrStepSensor
 from airflow.providers.amazon.aws.operators.glue_crawler import GlueCrawlerOperator
+from airflow.providers.amazon.aws.operators.athena import AthenaOperator
 
 default_args = {
     'owner': 'airflow',
@@ -186,6 +187,19 @@ glue_crawler_task = GlueCrawlerOperator(
     dag=dag,
 )
 
+# Add Athena query task after the Glue crawler
+athena_query_task = AthenaOperator(
+    task_id='run_athena_query',
+    query='SELECT * FROM "AwsDataCatalog"."q2-processed-data-output"."merged_daily_weather_data"',
+    database='q2-processed-data-output',
+    output_location='s3://is459-g1t7-smart-meters-in-london/quicksight-folder/q2-query',
+    aws_conn_id='aws_default',
+    sleep_time=30,
+    catalog='AwsDataCatalog',
+    dag=dag,
+)
+
+
 # Add q2-ml-forest step to the EMR cluster - Now after the Glue crawler
 ml_forest_step_adder = EmrAddStepsOperator(
     task_id='add_ml_forest_step',
@@ -284,4 +298,4 @@ cluster_terminator = EmrTerminateJobFlowOperator(
 )
 
 # Define the DAG dependencies - Updated to include merge data step before ETL
-cluster_creator >> merge_data_step_adder >> merge_data_step_checker >> etl_step_adder >> etl_step_checker >> glue_crawler_task >> ml_forest_step_adder >> ml_forest_step_checker >> weather_api_step_adder >> weather_api_step_checker >> forecast_step_adder >> forecast_step_checker >> cluster_terminator
+cluster_creator >> merge_data_step_adder >> merge_data_step_checker >> etl_step_adder >> etl_step_checker >> glue_crawler_task >> athena_query_task >> ml_forest_step_adder >> ml_forest_step_checker >> weather_api_step_adder >> weather_api_step_checker >> forecast_step_adder >> forecast_step_checker >> cluster_terminator
