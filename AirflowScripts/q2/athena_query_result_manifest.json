@@ -1,0 +1,15 @@
+{
+    "fileLocations": [
+        {
+            "URIs": [
+                "s3://is459-g1t7-smart-meters-in-london/quicksight-folder/Unsaved/2025/03/30/b0b092c8-859d-4ff5-9ff8-70e71bfd6c4a.csv"
+            ]
+        }
+    ],
+    "globalUploadSettings": {
+        "format": "CSV",
+        "delimiter": ",",
+        "textqualifier": "\"",
+        "containsHeader": "true"
+    }
+}
