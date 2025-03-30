@@ -1,9 +1,6 @@
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
-from sklearn.preprocessing import LabelEncoder
 from pyspark.sql import SparkSession
-from pyspark.ml.feature import VectorAssembler
-from pyspark.sql.functions import col, when, lit
 import numpy as np
 import joblib
 import findspark
@@ -31,10 +28,6 @@ s3_path = "s3a://is459-g1t7-smart-meters-in-london/processed-data/merged_daily_w
 df_spark = spark.read.parquet(s3_path)
 
 # Define features
-features = [
-    "temp_daylight_interaction", "is_weekend", "pressure",
-    "temperaturemax", "temperaturemin", "windbearing", "windspeed", "humidity", "cloudcover"
-]
 features = [
     "is_weekend", "temp_daylight_interaction", "is_holiday",
     "temperaturemax", "apparenttemperaturemax", "pressure",
@@ -152,11 +145,46 @@ print(f"Random Forest model saved successfully at: {model_path}")
 s3 = boto3.resource('s3')
 bucket_name = 'is459-g1t7-smart-meters-in-london'
 key = "ml-models/randomforest.pkl"
-
-# Upload the file
 s3.Bucket(bucket_name).upload_file(model_path, key)
-
 print(f"Random Forest model saved successfully at: s3://{bucket_name}/{key}")
+
+print("\n📦 Generating Actual vs Predicted CSVs for selected LCLids...")
+
+# Re-evaluate test set with LCLid
+test_pd_with_lclid = test_df.select(["lclid"] + features + [target]).dropna().toPandas()
+X_full = test_pd_with_lclid[features]
+y_full = test_pd_with_lclid[target]
+lclids = test_pd_with_lclid["lclid"]
+
+y_full_preds = rf_model.predict(X_full)
+
+full_predictions_df = pd.DataFrame({
+    "LCLid": lclids,
+    "Actual": y_full.values,
+    "Predicted": y_full_preds
+})
+
+# LCLids for visualisation
+selected_lclids = {"MAC000487", "MAC004336", "MAC000080", "MAC003672"}
+s3_prefix = "quicksight-folder/q2-query"
+
+for lclid in selected_lclids:
+    filtered = full_predictions_df[full_predictions_df["LCLid"] == lclid]
+    if filtered.empty:
+        print(f"No data for {lclid}")
+        continue
+
+    local_path = os.path.join(repo_root, f"{lclid}-Actual-vs-Predicted.csv")
+    filtered.to_csv(local_path, index=False)
+
+    s3_key = f"{s3_prefix}/{lclid}-Actual-vs-Predicted.csv"
+    try:
+        s3.Bucket(bucket_name).upload_file(local_path, s3_key)
+        print(f"✅ Uploaded: s3://{bucket_name}/{s3_key}")
+    except Exception as e:
+        print(f"Failed to upload {lclid}: {e}")
+    finally:
+        os.remove(local_path)
 
 # Stop Spark Session
 spark.stop()
