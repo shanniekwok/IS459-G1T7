@@ -2,5 +2,7 @@
 
 set -x -e
 
-# sudo python3 -m pip install --upgrade pip
-sudo python3 -m pip install boto3 # [TO DO] add packages
+# Install required Python packages
+sudo python3 -m pip install boto3 pandas requests
+sudo python3 -m pip install apache-airflow[cncf.kubernetes]
+sudo python3 -m pip install virtualenv
