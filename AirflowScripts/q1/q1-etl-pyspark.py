@@ -13,17 +13,15 @@ def main():
     spark = SparkSession.builder.appName("SmartMetersProcessingQ1").getOrCreate()
 
     # ---------- READ INPUT FILES ----------
-
-    df2 = spark.read.csv(os.path.join(S3_INPUT_FOLDER, "halfhourly_dataset.csv"), header=True, inferSchema=True)
+    df2 = spark.read.csv(os.path.join(S3_INPUT_FOLDER, "halfhourly_dataset"), header=True, inferSchema=True)
     df4 = spark.read.csv(os.path.join(S3_INPUT_FOLDER, "acorn_details.csv"), header=True, inferSchema=True)
     df6 = spark.read.csv(os.path.join(S3_INPUT_FOLDER, "informations_households.csv"), header=True, inferSchema=True)
-    df6 = df6.drop(df6["file"])
     df10_1 = spark.read.csv(os.path.join(S3_INPUT_FOLDER, "acorn_information.csv"), header=True, inferSchema=True)
     df10_reduced = df10_1.select("Acorn", "Acorn Category")
     df12 = spark.read.csv(os.path.join(S3_INPUT_FOLDER, "tariff_type.csv"), header=True, inferSchema=True)
     df14 = spark.read.csv(os.path.join(S3_INPUT_FOLDER, "property_type_energy_efficiency.csv"), header=True, inferSchema=True)
     
-# ---------- CAST COLUMNS ----------
+    # ---------- CAST COLUMNS ----------
 
     df2 = df2.withColumn("LCLid", col("LCLid").cast("string"))
     df2 = df2.withColumn("tstp", col("tstp").cast("string"))
@@ -72,6 +70,7 @@ def main():
     # ---------- DROP UNNECESSARY ROWS ----------
 
     df2 = df2.na.drop(subset=["energy(kWh/hh)"])
+    df6 = df6.drop(df6["file"])
 
     # ---------- PROCESS ACORN DETAILS ----------
     # Emulate melt with stack:
