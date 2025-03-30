@@ -26,8 +26,10 @@ df_spark = spark.read.option("header", "true").option("inferSchema", "true").csv
 
 # Define feature columns
 features = [
-    "temp_daylight_interaction", "is_weekend", "pressure",
-    "temperaturemax", "temperaturemin", "windbearing", "windspeed", "humidity", "cloudcover"
+    "is_weekend", "temp_daylight_interaction", "is_holiday",
+    "temperaturemax", "apparenttemperaturemax", "pressure",
+    "apparenttemperaturemin", "apparenttemperaturehigh",
+    "temperaturehigh", "daylight_duration"
 ]
 
 target = "energy_mean"

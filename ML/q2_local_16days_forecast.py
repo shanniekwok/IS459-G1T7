@@ -29,8 +29,10 @@ print("Random Forest model loaded successfully.")
 
 # Ensure the weather data has the correct feature set
 features = [
-    "temp_daylight_interaction", "is_weekend", "pressure",
-    "temperaturemax", "temperaturemin", "windbearing", "windspeed", "humidity", "cloudcover"
+    "is_weekend", "temp_daylight_interaction", "is_holiday",
+    "temperaturemax", "apparenttemperaturemax", "pressure",
+    "apparenttemperaturemin", "apparenttemperaturehigh",
+    "temperaturehigh", "daylight_duration"
 ]
 
 # Ensure weather data only includes the required features

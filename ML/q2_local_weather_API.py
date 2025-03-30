@@ -23,41 +23,50 @@ if response.status_code != 200:
 
 # Process Weather Data
 forecast_list = weather_data["list"]
-
-# Extract Relevant Features
 weather_records = []
+
 for forecast in forecast_list:
     dt = datetime.utcfromtimestamp(forecast["dt"])
     is_weekend = 1 if dt.weekday() >= 5 else 0
+    is_holiday = 0  # no holiday info in OpenWeather API
 
+    # Sunrise and sunset for daylight calculation
     sunrise = forecast.get("sunrise")
     sunset = forecast.get("sunset")
     daylight_duration = (sunset - sunrise) / 3600 if sunset and sunrise else None  # in hours
 
-    temperatureMax = forecast["temp"]["max"]
-    
+    # Feels like calculations
+    feels_like = forecast["feels_like"]
+    apparent_max = max(feels_like.values())
+    apparent_min = min(feels_like.values())
+    apparent_high = feels_like.get("day")  # during daytime
+
+    temperaturemax = forecast["temp"]["max"]
+    temperaturehigh = forecast["temp"]["day"]
+
     record = {
         "date": dt.strftime('%Y-%m-%d'),
         "is_weekend": is_weekend,
-        "temperaturemax": temperatureMax,
-        "temperaturemin": forecast["temp"]["min"],
+        "temp_daylight_interaction": temperaturemax * daylight_duration if daylight_duration else None,
+        "is_holiday": is_holiday,
+        "temperaturemax": temperaturemax,
+        "apparenttemperaturemax": apparent_max,
+        "apparenttemperaturemin": apparent_min,
+        "apparenttemperaturehigh": apparent_high,
+        "temperaturehigh": temperaturehigh,
         "pressure": forecast["pressure"],
-        "humidity": forecast["humidity"],
-        "cloudcover": forecast["clouds"],
-        "windspeed": forecast["speed"],
-        "windbearing": forecast["deg"],
         "daylight_duration": daylight_duration,
-        "temp_daylight_interaction": temperatureMax * daylight_duration if daylight_duration else None
     }
+
     weather_records.append(record)
 
 # Convert to DataFrame
 df_weather = pd.DataFrame(weather_records)
 
-# Show Data
+# Show data
 print(df_weather.head())
 
-# Save to weather_API_results folder
+# Save to file
 save_dir = os.path.join(os.getcwd(), "weather_API_results")
 os.makedirs(save_dir, exist_ok=True)
 save_path = os.path.join(save_dir, "london_weather_forecast.csv")

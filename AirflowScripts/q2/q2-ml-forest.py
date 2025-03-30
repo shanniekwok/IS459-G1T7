@@ -35,6 +35,13 @@ features = [
     "temp_daylight_interaction", "is_weekend", "pressure",
     "temperaturemax", "temperaturemin", "windbearing", "windspeed", "humidity", "cloudcover"
 ]
+features = [
+    "is_weekend", "temp_daylight_interaction", "is_holiday",
+    "temperaturemax", "apparenttemperaturemax", "pressure",
+    "apparenttemperaturemin", "apparenttemperaturehigh",
+    "temperaturehigh", "daylight_duration"
+]
+
 
 target = "energy_mean"
 
