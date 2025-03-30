@@ -14,15 +14,15 @@ def main():
 
     # ---------- READ INPUT FILES ----------
 
-    df2 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "2. halfhourly_dataset.csv"), header=True, inferSchema=True)
-    df4 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "4. acorn_details.csv"), header=True, inferSchema=True)
-    df6 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "6. informations_households.csv"), header=True, inferSchema=True)
+    df2 = spark.read.csv(os.path.join(S3_INPUT_FOLDER, "halfhourly_dataset.csv"), header=True, inferSchema=True)
+    df4 = spark.read.csv(os.path.join(S3_INPUT_FOLDER, "acorn_details.csv"), header=True, inferSchema=True)
+    df6 = spark.read.csv(os.path.join(S3_INPUT_FOLDER, "informations_households.csv"), header=True, inferSchema=True)
     df6 = df6.drop(df6["file"])
-    df10_1 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "10. acorn_information.csv"), header=True, inferSchema=True)
+    df10_1 = spark.read.csv(os.path.join(S3_INPUT_FOLDER, "acorn_information.csv"), header=True, inferSchema=True)
     df10_reduced = df10_1.select("Acorn", "Acorn Category")
-    df12 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "12. tariff_type.csv"), header=True, inferSchema=True)
-    df14 = spark.read.csv(os.path.join(LOCAL_INPUT_FOLDER, "14. property_type_energy_efficiency.csv"), header=True, inferSchema=True)
-
+    df12 = spark.read.csv(os.path.join(S3_INPUT_FOLDER, "tariff_type.csv"), header=True, inferSchema=True)
+    df14 = spark.read.csv(os.path.join(S3_INPUT_FOLDER, "property_type_energy_efficiency.csv"), header=True, inferSchema=True)
+    
 # ---------- CAST COLUMNS ----------
 
     df2 = df2.withColumn("LCLid", col("LCLid").cast("string"))
