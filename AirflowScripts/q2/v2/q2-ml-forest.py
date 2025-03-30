@@ -23,6 +23,9 @@ spark = SparkSession.builder \
     .config("spark.dynamicAllocation.enabled", "false") \
     .getOrCreate()
 
+# Add this right after creating your Spark session
+spark.conf.set("spark.sql.legacy.parquet.nanosAsLong", "true")
+
 # Load Parquet file
 s3_path = "s3a://is459-g1t7-smart-meters-in-london/processed-data/merged_daily_weather_data"
 df_spark = spark.read.parquet(s3_path)
@@ -31,8 +34,10 @@ df_spark = spark.read.parquet(s3_path)
 features = [
     "temperatureMax", "temperatureMin", "temperatureHigh", "temperatureLow",
     "apparentTemperatureHigh", "apparentTemperatureLow", "apparentTemperatureMin", "apparentTemperatureMax",
-    "pressure", "humidity", "cloudCover", "windSpeed", "windBearing", 
-    "precipType"
+    "pressure", "humidity", "cloudCover", "windSpeed", "windBearing", "precipType", "visibility", "temp_variation",
+    "temp_humidity_interaction", "temp_cloudcover_interaction", "temp_uvindex_interaction",
+    "weekend_energy_interaction", "holiday_energy_interaction", "temp_daylight_interaction",
+    "daylight_duration"
 ]
 
 target = "energy_mean"

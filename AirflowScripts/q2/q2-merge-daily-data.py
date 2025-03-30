@@ -1,6 +1,7 @@
 from pyspark.sql import SparkSession
 import boto3
 import os
+from pyspark.sql.functions import col
 
 def main():
     # Create Spark Session
@@ -46,6 +47,13 @@ def main():
     
     # If we found and processed files
     if combined_df is not None:
+        
+        # Ensure energy_count is treated as an integer
+        combined_df = combined_df.withColumn("energy_count", col("energy_count").cast("int"))
+        
+        # Keep only rows where energy_count is exactly 48
+        combined_df = combined_df.filter(col("energy_count") == 48)
+
         # Repartition to 1 to get a single output file
         combined_df = combined_df.coalesce(1)
         
@@ -81,6 +89,8 @@ def main():
                 s3.delete_object(Bucket=source_bucket, Key=obj['Key'])
             
             print(f"Successfully combined all CSV files and wrote to {final_destination}")
+            print(f"Number of rows in combined dataframe: {combined_df.count()}")
+            
         else:
             print("Error: Could not find the output part file")
     else:

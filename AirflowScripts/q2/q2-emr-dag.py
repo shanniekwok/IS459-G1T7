@@ -27,7 +27,7 @@ dag = DAG(
 
 # Define the EMR cluster configuration
 JOB_FLOW_OVERRIDES = {
-    'Name': 'smart-meters-emr-cluster',
+    'Name': 'smart-meters-emr-cluster-q2',
     'ReleaseLabel': 'emr-7.8.0',
     'Applications': [
         {'Name': 'Hadoop'},
@@ -146,10 +146,8 @@ etl_step_adder = EmrAddStepsOperator(
             'HadoopJarStep': {
                 'Jar': 'command-runner.jar',
                 'Args': [
-                    'spark-submit',
-                    '--deploy-mode', 'cluster',
-                    '--master', 'yarn',
-                    "s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/q2-etl-pyspark.py",
+                    'bash', '-c',
+                    'sudo pip3 install python-dateutil -t /usr/lib/python3.9/site-packages && aws s3 cp s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/q2-etl.py /tmp/ && /usr/bin/python3 /tmp/q2-etl.py'
                 ],
             },
         }
@@ -177,7 +175,7 @@ glue_crawler_task = GlueCrawlerOperator(
         'Targets': {
             'S3Targets': [
                 {
-                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_df1_df3_df7_df8/',
+                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/merged_daily_weather_data/',
                     'Exclusions': [],
                     'SampleSize': 2,
                 },
@@ -201,7 +199,7 @@ ml_forest_step_adder = EmrAddStepsOperator(
                     'spark-submit',
                     '--deploy-mode', 'cluster',
                     '--master', 'yarn',
-                    "s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/q2-ml-forest-glue.py",
+                    "s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/q2-ml-forest.py",
                 ],
             },
         },
