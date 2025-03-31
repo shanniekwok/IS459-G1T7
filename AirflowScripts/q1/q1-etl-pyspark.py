@@ -190,9 +190,15 @@ def main():
     print(f"Number of rows: {merged_df2_df4_df6_df10_df12_df14.count()}")
     merged_df2_df4_df6_df10_df12_df14.show(10)
 
-    # ---------- WRITE THE FINAL DATAFRAME TO S3 AS PARQUET ----------
-    merged_df2_df4_df6_df10_df12_df14.write.mode("overwrite").parquet(f"{S3_OUTPUT_FOLDER}final_q1_df")
-    print("Processed datasets successfully written to S3 as Parquet!")
+    # ---------- WRITE THE FINAL DATAFRAMES TO S3 AS PARQUET ----------
+
+    # df4_melt -> final_q1_df/df4
+    df4_melt.write.mode("overwrite").parquet(f"{S3_OUTPUT_FOLDER}final_q1_df/df4_melt")
+    print("df4_melt successfully written to S3 as Parquet in folder final_q1_df | subfolder df4_melt!")
+
+    # merged_df2_df4_df6_df10_df12_df14 -> final_q1_df/merged_df2_df4_df6_df10_df12_df14
+    merged_df2_df4_df6_df10_df12_df14.write.mode("overwrite").parquet(f"{S3_OUTPUT_FOLDER}final_q1_df/merged_df2_df4_df6_df10_df12_df14")
+    print("merged_df2_df4_df6_df10_df12_df14 successfully written to S3 as Parquet in folder final_q1_df | subfolder merged_df2_df4_df6_df10_df12_df14!")
 
     # Stop Spark session
     spark.stop()

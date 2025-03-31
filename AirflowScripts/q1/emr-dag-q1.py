@@ -50,14 +50,6 @@ JOB_FLOW_OVERRIDES = {
         {'Name': 'JupyterEnterpriseGateway'},
         {'Name': 'Hue'},
     ],
-    # 'BootstrapActions': [
-    #     {
-    #         'Name': 'Install Dependencies',
-    #         'ScriptBootstrapAction': {
-    #             'Path': 's3://is459-g1t7-smart-meters-in-london/bootstrap/emr-setup-q1-vigh.sh',           # Ensure correct bash file is used
-    #         }
-    #     },
-    # ],
     'Instances': {
         'InstanceGroups': [
             {
@@ -119,7 +111,7 @@ etl_step_adder = EmrAddStepsOperator(
                     'spark-submit',
                     '--deploy-mode', 'cluster',
                     '--master', 'yarn',
-                    "s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/q1-etl-pyspark.py",      # CHANGE TO LATEST SPARK CODE
+                    "s3://is459-g1t7-smart-meters-in-london/pyspark-scripts/q1-etl-pyspark.py",
                 ],
             },
         }
@@ -144,14 +136,21 @@ etl_step_checker = EmrStepSensor(
 # --------------------------------------
 glue_crawler_task = GlueCrawlerOperator(
     task_id='run_glue_crawler',
-    config = {
-        'Name': 'glue_crawler_output_q1',                                                             # Change crawler name
+    config={
+        'Name': 'glue_crawler_output_q1',
         'Role': 'arn:aws:iam::761018854594:role/AWSGlueServiceRole-project-q1-v1',
-        'DatabaseName': 'q1-processed-data-schema',                                                   # Change database name 
+        'DatabaseName': 'q1-processed-data-schema',
         'Targets': {
-            'S3Targets': [                                                                            
+            'S3Targets': [    
+                # For df4_melt                                                                        
                 {
-                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/final_q1_df/',     # Ensure target folder is correct
+                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/final_q1_df/df4/',  
+                    'Exclusions': [],
+                    'SampleSize': 2,
+                },
+                # For merged_df2_df4_df6_df10_df12_df14
+                {
+                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/final_q1_df/merged_df2_df4_df6_df10_df12_df14/',
                     'Exclusions': [],
                     'SampleSize': 2,
                 },
@@ -165,15 +164,32 @@ glue_crawler_task = GlueCrawlerOperator(
 # --------------------------------------
 # Add Athena Query Task to DAG
 # --------------------------------------
-athena_query_task = AthenaOperator(
-    task_id='execute_athena_query',                                                                   # Change database name in query 
+
+# For df4_melt
+athena_query_task_1 = AthenaOperator(
+    task_id='execute_athena_query_df4_melt',
     query="""
         SELECT 
-            *
-        FROM "q1-processed-data-schema"."final_q1_df"
+            * 
+        FROM "q1-processed-data-schema"."df4_melt"
     """,
-    database='"q1-processed-data-schema"',
-    output_location='s3://is459-g1t7-smart-meters-in-london/athena-results/final_q1_df/',
+    database='q1-processed-data-schema',
+    output_location='s3://is459-g1t7-smart-meters-in-london/athena-results/final_q1_df/df4_melt/',
+    workgroup='primary',
+    aws_conn_id='aws_default',
+    dag=dag,
+)
+
+# For merged_df2_df4_df6_df10_df12_df14
+athena_query_task_2 = AthenaOperator(
+    task_id='execute_athena_query_merged_df2_df4_df6_df10_df12_df14',
+    query="""
+        SELECT 
+            * 
+        FROM "q1-processed-data-schema"."merged_df2_df4_df6_df10_df12_df14"
+    """,
+    database='q1-processed-data-schema',
+    output_location='s3://is459-g1t7-smart-meters-in-london/athena-results/final_q1_df/merged_df2_df4_df6_df10_df12_df14/',
     workgroup='primary',
     aws_conn_id='aws_default',
     dag=dag,
@@ -192,4 +208,4 @@ cluster_terminator = EmrTerminateJobFlowOperator(
 # --------------------------------------
 # Define DAG Dependency
 # --------------------------------------
-cluster_creator >> etl_step_adder >> etl_step_checker >> glue_crawler_task >> athena_query_task >> cluster_terminator
+cluster_creator >> etl_step_adder >> etl_step_checker >> glue_crawler_task >> athena_query_task_1 >> athena_query_task_2 >> cluster_terminator
