@@ -144,7 +144,7 @@ glue_crawler_task = GlueCrawlerOperator(
             'S3Targets': [    
                 # For df4_melt                                                                        
                 {
-                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/final_q1_df/df4/',  
+                    'Path': 's3://is459-g1t7-smart-meters-in-london/processed-data/final_q1_df/df4_melt/',  
                     'Exclusions': [],
                     'SampleSize': 2,
                 },
