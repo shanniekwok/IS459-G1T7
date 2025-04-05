@@ -56,7 +56,7 @@ JOB_FLOW_OVERRIDES = {
                 'Name': 'Master node',
                 'Market': 'SPOT',
                 'InstanceRole': 'MASTER',
-                'InstanceType': 'm5.2xlarge',
+                'InstanceType': 'm5.xlarge',
                 'InstanceCount': 1,
             },
             {
