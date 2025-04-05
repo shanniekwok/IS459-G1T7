@@ -1,0 +1,18 @@
+{
+    "fileLocations": [
+        {
+            "URIs": [
+                "s3://is459-g1t7-smart-meters-in-london/quicksight-folder/q2-query/MAC000002-Actual-vs-Predicted.csv",
+                "s3://is459-g1t7-smart-meters-in-london/quicksight-folder/q2-query/MAC000487-Actual-vs-Predicted.csv",
+                "s3://is459-g1t7-smart-meters-in-london/quicksight-folder/q2-query/MAC000768-Actual-vs-Predicted.csv",
+                "s3://is459-g1t7-smart-meters-in-london/quicksight-folder/q2-query/MAC005160-Actual-vs-Predicted.csv"
+            ]
+        }
+    ],
+    "globalUploadSettings": {
+        "format": "CSV",
+        "delimiter": ",",
+        "textqualifier": "\"",
+        "containsHeader": "true"
+    }
+}
