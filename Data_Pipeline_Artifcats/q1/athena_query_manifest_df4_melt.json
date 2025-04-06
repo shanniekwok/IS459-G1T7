@@ -1,0 +1,15 @@
+{
+    "fileLocations": [
+        {
+            "URIs": [
+                "s3://is459-g1t7-smart-meters-in-london/athena-results/final_q1_df/df4_melt/c4a24976-7b09-49dd-bbdd-0b914a5d0adb.csv"
+            ]
+        }
+    ],
+    "globalUploadSettings": {
+        "format": "CSV",
+        "delimiter": ",",
+        "textqualifier": "\"",
+        "containsHeader": "true"
+    }
+}
